@@ -1,0 +1,423 @@
+{% extends 'main.html' %}
+
+
+    {% block bodycontent %}
+    <div class="d-flex justify-content-center my-5">
+        <div class="spinner-border" role="status" id="spinner">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+      <div id="generated-table">
+
+      </div>
+    {% endblock %}
+
+
+    {% block scriptcontent%}
+    
+    Set.prototype.isSubsetOf = function (otherSet) {
+        for (let elem of this) {
+            if (!otherSet.has(elem)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    function is_valid_team_addition(event, member, team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events) {
+        var events_done_by_member = Object.keys(team).filter(function(e) {
+            return team[e].includes(member);
+        });
+        var members_on_team = new Set(Object.values(team).flat());
+        
+        // already enough events for the member
+        if (events_done_by_member.length >= max_events_per_member) {
+            return false;
+        }
+        // member is already in the event
+        else if (team[event].includes(member)) {
+            return false;
+        }
+        // there is already enough members in the event
+        else if (team[event].length >= 2 + (events_with_3_members.includes(event) ? 1 : 0)) {
+            return false;
+        }
+        // member has already reached max build events
+        else if (events_done_by_member.filter(function(e) {
+            return build_events.includes(e);
+        }).length >= max_num_of_build_events_per_member) {
+            return false;
+        }
+        // new member would cause the team to go over the size limit
+        else if (members_on_team.size + 1 > team_size && !members_on_team.has(member)) {
+            return false;
+        }
+        
+        // adding member to event would cause conflicts
+        var conflicts = Array(conflicting_events.length).fill(0);
+        events_done_by_member.push(event);
+        events_done_by_member.forEach(function(e) {
+            conflicting_events.forEach(function(c, index) {
+                if (c.includes(e)) {
+                    conflicts[index] += 1;
+                }
+            });
+            if (conflicts.some(function(c) {
+                return c >= 2;
+            })) {
+                return false;
+            }
+        });
+        
+        return true;
+    }
+
+    function calculate_preferences_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences) {
+        var empty_spots = Object.keys(team).map(function (e) {
+            return 2 - team[e].length + (events_with_3_members.includes(e) ? 1 : 0);
+        });
+        //console.log("hi");
+        //console.log(team);
+        //console.log(required_member_event_pairs);
+        
+        var required_member_event_preferences_not_yet_fulfilled = required_member_event_pairs.filter(function (me) {
+            return !team[me[1]].includes(me[0]);
+        });
+        var total_preference_score = 0;
+        var total_skill_score = 0;
+    
+        for (var e in team) {
+            for (var mme of member_member_event_pairs) {
+                if (mme[2] === null || mme[2] === e) {
+                    if ((new Set([mme[0], mme[1]])).isSubsetOf(new Set(team[e]))) {
+                        total_preference_score -= worst_preference_amount;
+                    } else if (team[e].length < 2 + (events_with_3_members.includes(e) ? 1 : 0) && (team[e].includes(mme[0]) || team[e].includes(mme[1])) && new Set([mme[0], mme[1]]).isSubsetOf(new Set(team_members)) && members_to_ranked_preferences[mme[0]].includes(mme[2]) && members_to_ranked_preferences[mme[1]].includes(mme[2])) {
+                        total_preference_score -= worst_preference_amount * 0.5;
+                    }
+                }
+            }
+            for (var m of team[e]) {
+                if (members_to_ranked_preferences[m].includes(e)) {
+                    total_preference_score += members_to_ranked_preferences[m].indexOf(e);
+                    total_skill_score -= 1 - (team_members.indexOf(m) / team_members.length);
+                } else {
+                    var total_num_of_similar_events = 0;
+                    for (var wanted_e of members_to_ranked_preferences[m]) {
+                        for (var et of event_types) {
+                            if (e.includes(et) && wanted_e.includes(et)) {
+                                total_num_of_similar_events += 1;
+                            }
+                        }
+                    }
+                    if (members_to_ranked_preferences[m].length !== 0) {
+                        total_preference_score += worst_preference_amount * 5 - total_num_of_similar_events / members_to_ranked_preferences[m].length;
+                    } else {
+                        total_preference_score += worst_preference_amount;
+                    }
+                }
+                if (members_to_experience[m][e]) {
+                    if (members_to_experience[m][e] >= min_event_experience) {
+                        total_skill_score -= members_to_skill_level[m][e];
+                    }
+                }
+            }
+        }
+    
+        return (
+            total_preference_score * (1 - skill_vs_preferences) +
+            total_skill_score * skill_vs_preferences +
+            empty_spots.reduce(function (a, b) {
+                return a + b;
+            }, 0) *
+                10000 +
+            required_member_event_preferences_not_yet_fulfilled.length * 1000
+        );
+    }
+        
+    function make_team(available_events, team_members, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events) {
+        var best_team = {};
+        for (var i = 0; i < available_events.length; i++) {
+            var event = available_events[i];
+            best_team[event] = [];
+        }
+        var best_score = Infinity;
+        while (true) {
+            var team = JSON.parse(JSON.stringify(best_team));
+            var changed = false;
+            for (var i = 0; i < available_events.length; i++) {
+                var event = available_events[i];
+                for (var j = 0; j < team_members.length; j++) {
+                    var member = team_members[j];
+                    if (is_valid_team_addition(event, member, team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                        var new_team = JSON.parse(JSON.stringify(team));
+                        new_team[event].push(member);
+                        var new_score = calculate_preferences_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                        if (new_score < best_score) {
+                            changed = true;
+                            best_score = new_score;
+                            best_team = JSON.parse(JSON.stringify(new_team));
+                        }
+                    }
+                }
+            }
+            console.log(best_team);
+            if (!changed) {
+                return best_team;
+            }
+        }
+    }
+
+    function fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences) {
+        var result = [];
+        console.log(team_members_list);
+        console.log("team_members_list");
+        for (var t = 0; t < teams_list.length; t++) {
+            var members_to_events = {};
+            console.log("teams_list[t]");
+            console.log(teams_list[t]);
+            for (var m = 0; m < team_members_list[t].length; m++) {
+                var member = team_members_list[t][m];
+                members_to_events[member] = [];
+                for (var e in teams_list[t]) {
+                    //console.log(e)
+                    //console.log(member)
+                    //console.log(teams_list[t][e])
+                    //var event = teams_list[t][e];
+                    //console.log(e)
+                    //console.log(event);
+                    if (teams_list[t][e].includes(member)) {
+                        members_to_events[member].push(e);
+                    }
+                }
+            }
+            console.log("members_to_events");
+            console.log(members_to_events);
+            var members_that_need_more_events = [];
+            for (var m in members_to_events) {
+                //console.log(m)
+                //console.log("members_to_events_m")
+                if (members_to_events[m].length < min_events_per_member) {
+                    members_that_need_more_events.push(m);
+                }
+            }
+            //console.log("members_that_need_more_events")
+            //console.log(members_that_need_more_events);
+            var most_amount_of_events_occupied_by_member = 0;
+            for (var m in members_to_events) {
+                if (members_to_events[m].length > most_amount_of_events_occupied_by_member) {
+                    most_amount_of_events_occupied_by_member = members_to_events[m].length;
+                }
+            }
+            console.log("most experience")
+            console.log(most_amount_of_events_occupied_by_member);
+            var members_that_can_give_away_events = [];
+            for (var m in members_to_events) {
+                if (members_to_events[m].length > min_events_per_member && members_to_events[m].length == most_amount_of_events_occupied_by_member) {
+                    members_that_can_give_away_events.push(m);
+                }
+            }
+            console.log("need more events");
+            console.log(members_that_need_more_events);
+            var best_team = JSON.parse(JSON.stringify(teams_list[t]));
+            for (let m0 in members_that_need_more_events) {
+                console.log(members_that_need_more_events[m0]);
+                console.log('member0')
+                var orig_team = JSON.parse(JSON.stringify(best_team));
+                let count = 0;
+                for (let key in best_team) {
+                    if (best_team[key].includes(m0)) {
+                        count++;
+                    }
+                }
+                while (count < min_events_per_member) {
+                    var changed = false;
+                    var best_score = Infinity;
+                    orig_team = JSON.parse(JSON.stringify(best_team));
+                    var members_to_events = {};
+                    for (var m = 0; m < team_members_list[t].length; m++) {
+                        var member = team_members_list[t][m];
+                        members_to_events[member] = [];
+                        for (var e in teams_list[t]) {
+                            if (best_team[e].includes(member)) {
+                                members_to_events[member].push(e);
+                            }
+                        }
+                    }
+                    var members_that_need_more_events = [];
+                    for (var m in members_to_events) {
+                        if (members_to_events[m].length < min_events_per_member) {
+                            members_that_need_more_events.push(m);
+                        }
+                    }
+                    var most_amount_of_events_occupied_by_member = 0;
+                    for (var m in members_to_events) {
+                        if (members_to_events[m].length > most_amount_of_events_occupied_by_member) {
+                            most_amount_of_events_occupied_by_member = members_to_events[m].length;
+                        }
+                    }
+                    var members_that_can_give_away_events = [];
+                    for (var m in members_to_events) {
+                        if (members_to_events[m].length > min_events_per_member && members_to_events[m].length == most_amount_of_events_occupied_by_member) {
+                            members_that_can_give_away_events.push(m);
+                        }
+                    }
+                    console.log("hiyaiatia")
+                    console.log(members_that_can_give_away_events);
+                    for (let m1 in members_that_can_give_away_events) {
+                        console.log(members_to_events)
+                        console.log(m1)
+                        console.log(members_that_can_give_away_events[m1])
+                        for (var e = 0; e < members_to_events[members_that_can_give_away_events[m1]].length; e++) {
+                            var event = members_to_events[members_that_can_give_away_events[m1]][e];
+                            if (!required_member_event_pairs.includes([members_that_can_give_away_events[m1], event])) {
+                                console.log();
+                                console.log(members_that_need_more_events[m0]);
+                                console.log(members_that_can_give_away_events[m1]);
+                                console.log(e);
+                                var temp_team = JSON.parse(JSON.stringify(orig_team));
+                                var index = temp_team[event].indexOf(members_that_can_give_away_events[m1]);
+                                if (index > -1) {
+                                    temp_team[event].splice(index, 1);
+                                }
+                                if (is_valid_team_addition(event, members_that_need_more_events[m0], temp_team, teams[t], max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                    //console.log("is valid");
+                                    temp_team[event].push(members_that_need_more_events[m0]);
+                                    var members_to_events = {};
+                                    for (var m = 0; m < team_members_list[t].length; m++) {
+                                        var member = team_members_list[t][m];
+                                        members_to_events[member] = [];
+                                        for (var e in teams_list[t]) {
+                                            if (temp_team[e].includes(member)) {
+                                                members_to_events[member].push(e);
+                                            }
+                                        }
+                                    }
+                                    var number_of_events_of_members_with_less_than_min = 0;
+                                    for (var m in members_to_events) {
+                                        if (members_to_events[m].length < min_events_per_member) {
+                                            number_of_events_of_members_with_less_than_min += min_events_per_member - members_to_events[m].length;
+                                        }
+                                    }
+                                    
+                                    var team_score = calculate_preferences_score(temp_team, team_members_list[t], members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences) + number_of_events_of_members_with_less_than_min * 1000;
+                                    if (team_score < best_score) {
+                                        //console.log("team score is better than best score");
+                                        //console.log(temp_team)
+                                        best_score = team_score;
+                                        best_team = JSON.parse(JSON.stringify(temp_team));
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!changed) {
+                        break;
+                    }
+                }
+            }
+            result.push(best_team);
+        }
+        return result;
+    }
+
+    function tableCreate() {
+        const body = document.body,
+              tbl = document.createElement('table');
+        tbl.style.width = '100px';
+        tbl.style.border = '1px solid black';
+      
+        for (let i = 0; i < 3; i++) {
+          const tr = tbl.insertRow();
+          for (let j = 0; j < 2; j++) {
+            if (i === 2 && j === 1) {
+              break;
+            } else {
+              const td = tr.insertCell();
+              td.appendChild(document.createTextNode(`Cell I${i}/J${j}`));
+              td.style.border = '1px solid black';
+              if (i === 1 && j === 1) {
+                td.setAttribute('rowSpan', '2');
+              }
+            }
+          }
+        }
+        body.appendChild(tbl);
+      }
+      
+
+    let available_events = {{available_events|safe}};
+    let ranked_members = {{ranked_members|safe}};
+    let teams = {{teams|safe}};
+    let members_to_ranked_preferences = {{members_to_ranked_preferences|safe}};
+    let member_member_event_pairs = {{member_member_event_pairs|safe}};
+    let events_with_3_members = {{events_with_3_members|safe}};
+    let worst_preference_amount = {{worst_preference_amount}};
+    let members_to_skill_level = {{members_to_skill_level|safe}};
+    let members_to_experience = {{members_to_experience|safe}};
+    let build_events = {{build_events|safe}};
+    let required_member_event_pairs = {{required_member_event_pairs|safe}};
+    let event_types = {{event_types|safe}};
+    let min_event_experience = {{generated_competition_settings.min_event_experience}};
+    let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
+    let max_events_per_member = {{generated_competition_settings.max_events_per_member}};
+    let min_events_per_member = {{generated_competition_settings.min_events_per_member}};
+    let max_num_of_build_events_per_member = {{generated_competition_settings.max_num_of_build_events_per_member}};
+    let conflicting_events = {{conflicting_events|safe}};
+    let spinner = document.getElementById("spinner");
+
+    function generateTeams(callback) {
+        spinner.style.visibility = "visible";
+        let teams_list = [];
+        console.log(ranked_members);
+        console.log(teams);
+        let team_members_list = [];
+        
+        // Simulating team generation with setTimeout (replace this with your actual code)
+        setTimeout(function() {
+            for (let t = 0; t<teams.length; t++){
+                let start_idx = teams.slice(0, t).reduce((acc, val) => acc + val, 0);
+                let end_idx = teams.slice(0, t + 1).reduce((acc, val) => acc + val, 0);
+                let team_members = ranked_members.slice(start_idx, end_idx);
+                console.log(team_members);
+                let team = make_team(available_events, team_members, members_to_ranked_preferences, member_member_event_pairs, teams[t], events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events);
+                teams_list.push(team);
+                team_members_list.push(team_members);
+            }
+            teams_list = fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences);
+            
+            // Callback with teams_list once teams are generated
+            callback(teams_list);
+    
+            // Hide spinner after teams are generated
+            spinner.style.visibility = "hidden";
+        }, 100); // Simulated delay, replace this with your actual team generation code
+    }
+    
+    function display_tables(teams_list){
+        console.log(teams_list);
+        let generated_table_div = document.getElementById("generated-table");
+        for (var team in teams_list){
+            let generated_table = document.createElement("table");
+            generated_table.style.border = "1px solid black";
+            //console.log(teams_list[team]);
+            for (var event in teams_list[team]){
+                //console.log(event);
+                const tr = generated_table.insertRow();
+                const td = tr.insertCell();
+                td.appendChild(document.createTextNode(event));
+                for (var member in teams_list[team][event]){
+                    //console.log(teams_list[team][event][member]);
+                    const td = tr.insertCell();
+                    td.appendChild(document.createTextNode(teams_list[team][event][member]));
+                }
+            }
+            generated_table_div.appendChild(generated_table);
+        }
+
+
+
+    }
+    
+    generateTeams(display_tables);
+{% endblock %}

@@ -1,0 +1,14 @@
+    {% extends 'main.html' %}
+
+    {% block bodycontent %}
+        <div class="card w-75 mx-auto my-4"><a href="{% url 'competitionSettingsFormView' %}" class="btn btn-primary">Generate New Competition</a></div>
+        {% for c in generated_competitions_list %}
+            <div class="card w-75 mx-auto my-3">
+                <h5 class="card-header">{{c.name}}</h5>
+                <div class="card-body">
+                    <a href="{% url 'generatedCompetitionSettingsView' pk=c.id %}" class="btn btn-secondary">View</a>
+                    <a href="{% url 'generatedCompetitionsDeleteView' pk=c.id %}" class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% endblock%}
