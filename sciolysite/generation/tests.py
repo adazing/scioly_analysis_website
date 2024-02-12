@@ -13,3 +13,6 @@ def remove_punctuation(input_string, is_event): # make it so only allow for lett
 
 print(remove_punctuation("Brian Zhao (O)", False))
 # print("Brian Zhao (O)".replace("(O)",""))
+
+dictionary = sorted({"a":1, "b":1, "d":1, "c":1}.items(), key=lambda item: item[1])
+print(dictionary)

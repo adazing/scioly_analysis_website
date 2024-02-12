@@ -84,6 +84,7 @@ def member_event_preferences_reader(member_event_preferences_data, generated_com
                     is_required = "(*)" in event_name
                     event_name = remove_punctuation(event_name, True)
                     print(event_name)
+                    #print(AvailableEvent.objects.all)
                     event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings)
                     wanted_member_event_pair = WantedMemberEventPair.objects.create(rank=e, event=event, member=member, required=is_required)
                 else: # reached end of row
@@ -488,45 +489,40 @@ def fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranke
     return result
 
 # test more at later date?
-# def improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience):
-#     result = []
-#     for t in range(len(teams_list)):
-#         members_to_events = {m:[e for e in teams_list[t] if m in teams_list[t][e]] for m in team_members_list[t]}
-#         # members_that_need_more_events = [m for m in members_to_events.keys() if len(members_to_events[m])<generated_competition_settings.min_events_per_member]
-#         # most_amount_of_events_occupied_by_member = max(members_to_events.values())
-#         # members_that_can_give_away_events = [x[0] for x in list(sorted([(m, team_members_list[t].index(m)) for m in list(members_to_events.keys()) if (len(members_to_events[m])>generated_competition_settings.min_events_per_member and len(members_to_events[m])==most_amount_of_events_occupied_by_member)], key=lambda item: item[1], reverse=True))]
-#         # temp_team = copy.deepcopy(teams_list[t])
-#         # required_member_event_pairs = [(me.member.name, me.event.name) for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings, required = True)]
-#         best_team = copy.deepcopy(teams_list[t])
-#         best_score = float("inf")
-#         done_member_switches = []
-#         for m0 in team_members_list[t]:
-#             print("orig_team", best_team)
-#             orig_team = copy.deepcopy(best_team)
-#             members_to_events = {m:[e for e in orig_team if m in orig_team[e]] for m in team_members_list[t]}
-#             for m1 in team_members_list[t]:
-#                 print(m0, m1)
-#                 if m0 != m1 and (m0, m1) not in done_member_switches and (m1, m0) not in done_member_switches:
-#                     done_member_switches.append((m0, m1))
-#                     for e0 in members_to_events[m0]:
-#                         for e1 in members_to_events[m1]:
-#                             if e0 != e1:
-#                                 print(e0, e1)
-#                                 temp_team = copy.deepcopy(orig_team)
-#                                 temp_team[e0].remove(m0)
-#                                 if is_valid_team_addition(e0, m1, temp_team, teams[t], generated_competition_settings, events_with_3_members):
-#                                     temp_team[e0].append(m1)
-#                                     temp_team[e1].remove(m1)
-#                                     if is_valid_team_addition(e1, m0, temp_team, teams[t], generated_competition_settings, events_with_3_members):
-#                                         print("hi")
-#                                         print("temp team", temp_team)
-#                                         temp_team[e1].append(m0)
-#                                         team_score = calculate_preferences_score(temp_team,  team_members_list[t], members_to_ranked_preferences, member_member_event_pairs, generated_competition_settings, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience)
-#                                         if team_score<best_score:
-#                                             best_score = team_score
-#                                             best_team = temp_team
-#         result.append(best_team)
-#     return result
+def improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience):
+    result = []
+    for t in range(len(teams_list)):
+        members_to_events = {m:[e for e in teams_list[t] if m in teams_list[t][e]] for m in team_members_list[t]}
+        best_team = copy.deepcopy(teams_list[t])
+        best_score = float("inf")
+        done_member_switches = []
+        for m0 in team_members_list[t]:
+            print("orig_team", best_team)
+            orig_team = copy.deepcopy(best_team)
+            members_to_events = {m:[e for e in orig_team if m in orig_team[e]] for m in team_members_list[t]}
+            for m1 in team_members_list[t]:
+                print(m0, m1)
+                if m0 != m1 and (m0, m1) not in done_member_switches and (m1, m0) not in done_member_switches:
+                    done_member_switches.append((m0, m1))
+                    for e0 in members_to_events[m0]:
+                        for e1 in members_to_events[m1]:
+                            if e0 != e1:
+                                print(e0, e1)
+                                temp_team = copy.deepcopy(orig_team)
+                                temp_team[e0].remove(m0)
+                                if is_valid_team_addition(e0, m1, temp_team, teams[t], generated_competition_settings, events_with_3_members):
+                                    temp_team[e0].append(m1)
+                                    temp_team[e1].remove(m1)
+                                    if is_valid_team_addition(e1, m0, temp_team, teams[t], generated_competition_settings, events_with_3_members):
+                                        print("hi")
+                                        print("temp team", temp_team)
+                                        temp_team[e1].append(m0)
+                                        team_score = calculate_preferences_score(temp_team,  team_members_list[t], members_to_ranked_preferences, member_member_event_pairs, generated_competition_settings, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience)
+                                        if team_score<best_score:
+                                            best_score = team_score
+                                            best_team = temp_team
+        result.append(best_team)
+    return result
 
 
 def check_if_valid_ranked_members_results(results, teams, required_members, seniors):
@@ -872,7 +868,7 @@ def frontend_generate(request, pk):
         # teams that are in generated_competition_settings
         teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=True)
         available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)]
-        available_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)]
+        available_events = sorted([e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)])
         events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
         build_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, is_build_event=True)]
         
@@ -939,6 +935,13 @@ def frontend_generate(request, pk):
                     members_to_skill_level[member.name][member.event_member_instance.event_name]=score
                     members_to_experience[member.name]={}
                     members_to_experience[member.name][member.event_member_instance.event_name]=1
+        
+        #shuffle dictionary to ensure randomness if two or more people have skills are the same
+        keys = list(members_to_skill_level.keys())
+        random.shuffle(keys)
+        members_to_skill_level={key:members_to_skill_level[key] for key in keys}
+        members_to_experience={key:members_to_skill_level[key] for key in keys}
+
         
         min_total_score = min([sum(members_to_skill_level[m].values()) for m in members_to_skill_level])
         members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_total_score) for m in available_members}

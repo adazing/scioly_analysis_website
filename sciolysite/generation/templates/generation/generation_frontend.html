@@ -54,21 +54,38 @@
         }
         
         // adding member to event would cause conflicts
-        var conflicts = Array(conflicting_events.length).fill(0);
         events_done_by_member.push(event);
-        events_done_by_member.forEach(function(e) {
-            conflicting_events.forEach(function(c, index) {
-                if (c.includes(e)) {
+        var conflicts = Array(conflicting_events.length).fill(0);
+        for (e of events_done_by_member){
+            //console.log(e);
+            for (index in conflicting_events){
+                if (conflicting_events[index].includes(e)){
                     conflicts[index] += 1;
                 }
-            });
-            if (conflicts.some(function(c) {
-                return c >= 2;
-            })) {
-                return false;
+                if (conflicts[index]>1){
+                    return false;
+                }
             }
+        }
+        {% comment %} events_done_by_member.forEach(function(e) {
+            conflicting_events.forEach(function(c, index) {
+                if (c.includes(e)) {
+                    console.log("hiier434");
+                    console.log(index)
+                    console.log(conflicts[index])
+                    conflicts[index] += 1;
+                    console.log(conflicts[index])
+                    console.log(c);
+                    console.log(events_done_by_member);
+                    console.log(conflicts);
+                    console.log(e);
+                }
+                if (conflicts[index]>1){
+                    return false;
+                }
+            });
         });
-        
+         {% endcomment %}
         return true;
     }
 
@@ -110,9 +127,9 @@
                         }
                     }
                     if (members_to_ranked_preferences[m].length !== 0) {
-                        total_preference_score += worst_preference_amount * 5 - total_num_of_similar_events / members_to_ranked_preferences[m].length;
+                        total_preference_score += worst_preference_amount*3 - total_num_of_similar_events / members_to_ranked_preferences[m].length;
                     } else {
-                        total_preference_score += worst_preference_amount;
+                        total_preference_score += worst_preference_amount*3;
                     }
                 }
                 if (members_to_experience[m][e]) {
@@ -133,7 +150,87 @@
             required_member_event_preferences_not_yet_fulfilled.length * 1000
         );
     }
-        
+
+    function improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences) {
+        var result = [];
+        for (var t = 0; t < teams_list.length; t++) {
+            var members_to_events = {};
+            for (var m = 0; m < team_members_list[t].length; m++) {
+                var m0 = team_members_list[t][m];
+                members_to_events[m0] = [];
+                for (var e in teams_list[t]) {
+                    if (teams_list[t][e].includes(m0)) {
+                        members_to_events[m0].push(e);
+                    }
+                }
+            }
+            console.log("improve_teams");
+            console.log(members_to_events);
+            var best_team = JSON.parse(JSON.stringify(teams_list[t]));
+            var best_score = Infinity;
+            var done_member_switches = [];
+            for (var m0_idx = 0; m0_idx < team_members_list[t].length; m0_idx++) {
+                let m0 = team_members_list[t][m0_idx];
+                var orig_team = JSON.parse(JSON.stringify(best_team));
+                members_to_events = {};
+                for (var m = 0; m < team_members_list[t].length; m++) {
+                    var m1 = team_members_list[t][m];
+                    members_to_events[m1] = [];
+                    for (var e in orig_team) {
+                        if (orig_team[e].includes(m1)) {
+                            members_to_events[m1].push(e);
+                        }
+                    }
+                }
+                for (var m1_idx = 0; m1_idx < team_members_list[t].length; m1_idx++) {
+                    let m1 = team_members_list[t][m1_idx];
+                    console.log(m0);
+                    console.log(m1);
+                    if (m0 != m1 && !done_member_switches.includes([m0, m1]) && !done_member_switches.includes([m1, m0])) {
+                        done_member_switches.push([m0, m1]);
+                        for (var e0 of members_to_events[m0]) {
+                            for (var e1 of members_to_events[m1]) {
+                                if (e0 != e1) {
+                                    var temp_team = JSON.parse(JSON.stringify(orig_team));
+                                    var index = temp_team[e0].indexOf(m0);
+                                    if (index > -1) {
+                                        temp_team[e0].splice(index, 1);
+                                    }
+                                    if (is_valid_team_addition(e0, m1, temp_team, teams[t], max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                        temp_team[e0].push(m1);
+                                        var index = temp_team[e1].indexOf(m1);
+                                        if (index > -1) {
+                                            temp_team[e1].splice(index, 1);
+                                        }
+                                        if (is_valid_team_addition(e1, m0, temp_team, teams[t], max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                            console.log("is valid");
+                                            console.log(e0);
+                                            console.log(e1);
+                                            console.log(orig_team);
+                                            console.log(temp_team);
+                                            temp_team[e1].push(m0);
+                                            var team_score = calculate_preferences_score(temp_team, team_members_list[t], members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                                            if (team_score < best_score) {
+                                                console.log("new best team!");
+                                                console.log(best_team);
+                                                best_score = team_score;
+                                                best_team = JSON.parse(JSON.stringify(temp_team));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            result.push(best_team);
+        }
+        return result;
+    }
+    
+    
+
     function make_team(available_events, team_members, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events) {
         var best_team = {};
         for (var i = 0; i < available_events.length; i++) {
@@ -169,12 +266,12 @@
 
     function fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences) {
         var result = [];
-        console.log(team_members_list);
-        console.log("team_members_list");
+        {% comment %} console.log(team_members_list);
+        console.log("team_members_list"); {% endcomment %}
         for (var t = 0; t < teams_list.length; t++) {
             var members_to_events = {};
-            console.log("teams_list[t]");
-            console.log(teams_list[t]);
+            {% comment %} console.log("teams_list[t]");
+            console.log(teams_list[t]); {% endcomment %}
             for (var m = 0; m < team_members_list[t].length; m++) {
                 var member = team_members_list[t][m];
                 members_to_events[member] = [];
@@ -190,8 +287,8 @@
                     }
                 }
             }
-            console.log("members_to_events");
-            console.log(members_to_events);
+            {% comment %} console.log("members_to_events");
+            console.log(members_to_events); {% endcomment %}
             var members_that_need_more_events = [];
             for (var m in members_to_events) {
                 //console.log(m)
@@ -208,20 +305,20 @@
                     most_amount_of_events_occupied_by_member = members_to_events[m].length;
                 }
             }
-            console.log("most experience")
-            console.log(most_amount_of_events_occupied_by_member);
+            {% comment %} console.log("most experience")
+            console.log(most_amount_of_events_occupied_by_member); {% endcomment %}
             var members_that_can_give_away_events = [];
             for (var m in members_to_events) {
                 if (members_to_events[m].length > min_events_per_member && members_to_events[m].length == most_amount_of_events_occupied_by_member) {
                     members_that_can_give_away_events.push(m);
                 }
             }
-            console.log("need more events");
-            console.log(members_that_need_more_events);
+            {% comment %} console.log("need more events");
+            console.log(members_that_need_more_events); {% endcomment %}
             var best_team = JSON.parse(JSON.stringify(teams_list[t]));
             for (let m0 in members_that_need_more_events) {
-                console.log(members_that_need_more_events[m0]);
-                console.log('member0')
+                {% comment %} console.log(members_that_need_more_events[m0]);
+                console.log('member0') {% endcomment %}
                 var orig_team = JSON.parse(JSON.stringify(best_team));
                 let count = 0;
                 for (let key in best_team) {
@@ -261,19 +358,19 @@
                             members_that_can_give_away_events.push(m);
                         }
                     }
-                    console.log("hiyaiatia")
-                    console.log(members_that_can_give_away_events);
+                    {% comment %} console.log("hiyaiatia")
+                    console.log(members_that_can_give_away_events); {% endcomment %}
                     for (let m1 in members_that_can_give_away_events) {
-                        console.log(members_to_events)
+                        {% comment %} console.log(members_to_events)
                         console.log(m1)
-                        console.log(members_that_can_give_away_events[m1])
+                        console.log(members_that_can_give_away_events[m1]) {% endcomment %}
                         for (var e = 0; e < members_to_events[members_that_can_give_away_events[m1]].length; e++) {
                             var event = members_to_events[members_that_can_give_away_events[m1]][e];
                             if (!required_member_event_pairs.includes([members_that_can_give_away_events[m1], event])) {
-                                console.log();
+                                {% comment %} console.log();
                                 console.log(members_that_need_more_events[m0]);
                                 console.log(members_that_can_give_away_events[m1]);
-                                console.log(e);
+                                console.log(e); {% endcomment %}
                                 var temp_team = JSON.parse(JSON.stringify(orig_team));
                                 var index = temp_team[event].indexOf(members_that_can_give_away_events[m1]);
                                 if (index > -1) {
@@ -384,6 +481,7 @@
                 teams_list.push(team);
                 team_members_list.push(team_members);
             }
+            teams_list = improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences)
             teams_list = fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, min_event_experience, skill_vs_preferences);
             
             // Callback with teams_list once teams are generated
