@@ -767,6 +767,7 @@ def generateTeams(request, pk):
         #                 del available_members_that_can_be_moved[available_members_that_can_be_moved.index(chosen_switch_idx)]
         
         # GENERATE TEAM MEMBERS
+
         ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
         
         teams_list = []
@@ -940,9 +941,9 @@ def frontend_generate(request, pk):
         keys = list(members_to_skill_level.keys())
         random.shuffle(keys)
         members_to_skill_level={key:members_to_skill_level[key] for key in keys}
-        members_to_experience={key:members_to_skill_level[key] for key in keys}
+        print(members_to_skill_level)
+        members_to_experience={key:members_to_experience[key] for key in keys}
 
-        
         min_total_score = min([sum(members_to_skill_level[m].values()) for m in members_to_skill_level])
         members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_total_score) for m in available_members}
         
@@ -957,8 +958,18 @@ def frontend_generate(request, pk):
         ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())
                 
         # GENERATE TEAM MEMBERS
+        print("hi33")
+        print(members_to_skill_level)
+        print(members_to_total_skill_level)
+        print(ranked_members)
+        print(teams)
+        print("officers")
+        print(officers)
+        print(required_members)
+        print(required_members_on_specific_teams)
+        print(seniors)
         ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
-
+        print(ranked_members)
         context = {
             "available_members" : available_members,
             "ranked_members": ranked_members,

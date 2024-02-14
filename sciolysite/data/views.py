@@ -188,13 +188,20 @@ def skillView(request):
     # dictionary that maps member names to a dictionary that maps event names to html popup when clicking on the cell
     members_to_data = dict()
     
+    average_scores_of_competition_cache = {}
     for member in member_list:
         all_events.add(member.event_member_instance.event_name)
+        # did not quit/get disqualified
         if member.event_member_instance.score<=member.event_member_instance.team.competition.number_of_teams_competed:
-            school_scores_of_competition=[]
-            for team in Team.objects.filter(competition=member.event_member_instance.team.competition):
-                school_scores_of_competition+=[x.score for x in EventMemberInstance.objects.filter(team=team)]
-            average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+            competition=member.event_member_instance.team.competition
+            if competition.id in average_scores_of_competition_cache:
+                average_score_of_team = average_scores_of_competition_cache[competition.id]
+            else:
+                school_scores_of_competition=[]
+                for team in Team.objects.filter(competition=member.event_member_instance.team.competition):
+                    school_scores_of_competition+=[x.score for x in EventMemberInstance.objects.filter(team=team) if x.score<=x.team.competition.number_of_teams_competed]
+                average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+                average_scores_of_competition_cache[competition.id] = average_score_of_team
             score=average_score_of_team/member.event_member_instance.team.competition.number_of_teams_competed-member.event_member_instance.score/member.event_member_instance.team.competition.number_of_teams_competed
             if member.name in members_to_skill_level:
                 if member.event_member_instance.event_name in members_to_skill_level[member.name]:
@@ -220,7 +227,7 @@ def skillView(request):
     max_xp = max([max(members_to_experience[m].values()) for m in members_to_experience])
     
     table_info_data = [["".join([members_to_data[m][e]+"</ul>" for e in members_to_skill_level[m]])]+[members_to_data[m][e]+"</ul>" if e in members_to_skill_level[m] else "<p>No Data</p>" for e in all_events] for m in members_to_skill_level]
-    
+    print(members_to_skill_level)
     table_data = [[m]+[(members_to_skill_level[m][e]-min_score)*100/(max_score-min_score) if e in members_to_skill_level[m] else 0 for e in all_events] for m in members_to_skill_level]
     table_data = [table_data, table_info_data]
     table_data = "var tabledata = ["+"".join(["{"+"".join(['"'+str(table_columns[i])+'":'+str(table_data[0][t][i])+','+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' if i!=0 else '"'+str(table_columns[i])+'":"'+str(table_data[0][t][i])+'",'+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' for i in range(len(table_columns))])+"}," for t in range(len(table_data[0]))])+"];"

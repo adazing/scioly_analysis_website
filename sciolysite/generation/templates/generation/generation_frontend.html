@@ -114,10 +114,14 @@
                 }
             }
             for (var m of team[e]) {
+                // member wants the event
                 if (members_to_ranked_preferences[m].includes(e)) {
+                    //add preference score
                     total_preference_score += members_to_ranked_preferences[m].indexOf(e);
+                    //decrese skill score, more likely to get if are better overall
                     total_skill_score -= 1 - (team_members.indexOf(m) / team_members.length);
                 } else {
+                    //look for similar events to waants
                     var total_num_of_similar_events = 0;
                     for (var wanted_e of members_to_ranked_preferences[m]) {
                         for (var et of event_types) {
@@ -126,20 +130,18 @@
                             }
                         }
                     }
+                    // more likely to get similar events to wants
                     if (members_to_ranked_preferences[m].length !== 0) {
                         total_preference_score += worst_preference_amount*3 - total_num_of_similar_events / members_to_ranked_preferences[m].length;
                     } else {
                         total_preference_score += worst_preference_amount*3;
                     }
                 }
-                if (members_to_experience[m][e]) {
-                    if (members_to_experience[m][e] >= min_event_experience) {
-                        total_skill_score -= members_to_skill_level[m][e];
-                    }
+                if (members_to_experience[m][e] >= min_event_experience) {
+                    total_skill_score -= members_to_skill_level[m][e];
                 }
             }
         }
-    
         return (
             total_preference_score * (1 - skill_vs_preferences) +
             total_skill_score * skill_vs_preferences +
