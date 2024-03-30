@@ -884,6 +884,7 @@ def frontend_generate(request, pk):
         conflicting_events=[[e.name for e in AvailableEvent.objects.filter(conflict=c, generated_competition_settings=generated_competition_settings)] for c in ConflictingEvents.objects.filter(generated_competition_settings=generated_competition_settings)]
         event_types = [[e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, event_type = et)] for et in EventType.objects.filter(generated_competition_settings=generated_competition_settings)]
         
+        
         required_member_event_pairs = [[me.member.name, me.event.name] for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings, required = True)]
         print(required_member_event_pairs)
         members_to_ranked_preferences = dict()
@@ -904,9 +905,11 @@ def frontend_generate(request, pk):
                 
         #review previous competition data
         members_to_experience=dict()
-        members_to_skill_level=dict()            
-        
+        members_to_skill_level=dict()   
+                
         member_list=[m for m in data.models.Member.objects.filter(event_member_instance__team__competition__user=request.user) if m.name in available_members]
+        print(available_members)
+        print(member_list)
         average_scores_of_competition_cache = {}
         for member in member_list: # for all the members
             #they did not quit/get disqualified
@@ -941,6 +944,7 @@ def frontend_generate(request, pk):
         keys = list(members_to_skill_level.keys())
         random.shuffle(keys)
         members_to_skill_level={key:members_to_skill_level[key] for key in keys}
+        print("hi4")
         print(members_to_skill_level)
         members_to_experience={key:members_to_experience[key] for key in keys}
 
@@ -949,10 +953,12 @@ def frontend_generate(request, pk):
         
         min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
         max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
-        # scale members_to_skill_level to be between 0 and worst_preference_amount
+        # scale members_to_skill_level to be between 0 and 1
         for m in members_to_skill_level:
             for e in members_to_skill_level[m]:
                 members_to_skill_level[m][e]=(members_to_skill_level[m][e]-min_score)/(max_score-min_score)
+            members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
+        members_to_skill_level = {m:{e:members_to_skill_level[m][e] for e in members_to_skill_level[m] if e in available_events} for m in members_to_skill_level}
         
         # rank the members
         ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())
