@@ -528,11 +528,13 @@
             best_team[event] = [];
         }
         var already_added_members = [];
+        var old_team = best_team;
         //iterate until all the people are on the team
-        for (var num_of_people_added = 0; num_of_people_added < team_size; num_of_people_added++){
+        while (already_added_members.length <= team_size){
             var team = JSON.parse(JSON.stringify(best_team));
             var available_events_left = [];
             var best_member = null;
+            var changed = false;
             best_score = Number.NEGATIVE_INFINITY;
             for (var e in team) {
                 if (team.hasOwnProperty(e) && team[e].length < 2 + (e in events_with_3_members)) {
@@ -547,7 +549,7 @@
                 var new_team = JSON.parse(JSON.stringify(team));
                 var events_added = 0;
                 var total_score = 0;
-                //iterate over each event and add top min_num_events_per_person events to team
+                //iterate over each event that they did in the past and add top min_num_events_per_person events to team
                 for (let event of Object.keys(events)){
                     //console.log(member);
                     //console.log(event);
@@ -555,12 +557,12 @@
                     if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
                         // event is less important if partners are already really good
                         for (let partner of new_team[event]){
-                            total_score -= members_to_experience[partner][event]/2;
+                            total_score -= members_to_skill_level[partner][event]/2;
                         }
                         //add member to new_team
                         new_team[event].push(member);
-                        total_score += members_to_experience[member][event];
-                        //total_score += members_to_skill_level[member][event];
+                        //total_score += members_to_experience[member][event];
+                        total_score += members_to_skill_level[member][event];
                         //console.log(member);
                         //console.log(event);
                         //console.log(total_score);
@@ -569,6 +571,10 @@
                             break;
                         }
                     }
+                    // can replace a person on existing event
+                    //else if (new_team[event].length == 2 + (events_with_3_members.includes(event) ? 1 : 0)){
+                        
+                    //}
                 }
                 if (total_score>best_score){
                     best_team = JSON.parse(JSON.stringify(new_team));
@@ -577,8 +583,36 @@
                 }
             }
         }
+            // check that there isnt already a person better suited for each event of the new person. If it is, then put better person in spot.
+            for (let event of Object.keys(best_team)){
+                if (best_team[event].includes(best_member)){
+                    var best_addition = Number.NEGATIVE_INFINITY;
+                    for (let member of already_added_members) {
+                        if (event in members_to_skill_level[member]){
+                            console.log(member);
+                            var temp_team = JSON.parse(JSON.stringify(best_team));
+                            temp_team[event].splice(temp_team[event].indexOf(best_member), 1);
+                            if (members_to_skill_level[member][event]>members_to_skill_level[best_member][event] && is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                                if (members_to_skill_level[member][event]>best_addition){
+                                    best_team[event].splice(best_team[event].indexOf(best_member), 1);
+                                    best_team[event].push(member);
+                                    best_addition = members_to_skill_level[member][event];
+                                }
+                                console.log("hi");
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+                
+            }
+            if (!changed){
             already_added_members.push(best_member);
             console.log(best_team);
+            }
+             {% comment %} else if (old_team == best_team){
+                break;
+            } {% endcomment %}
         }
         return best_team;
     }

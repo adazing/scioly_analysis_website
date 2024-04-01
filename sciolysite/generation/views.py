@@ -911,35 +911,45 @@ def frontend_generate(request, pk):
         print(available_members)
         print(member_list)
         average_scores_of_competition_cache = {}
-        for member in member_list: # for all the members
-            #they did not quit/get disqualified
-            if member.event_member_instance.score<=member.event_member_instance.team.competition.number_of_teams_competed:
-                # calculate score for event_member_instance
-                competition = member.event_member_instance.team.competition
-                if competition.id in average_scores_of_competition_cache:
-                    average_score_of_team = average_scores_of_competition_cache[competition.id]
-                else:
-                    school_scores_of_competition=[]
-                    for team in data.models.Team.objects.filter(competition=competition): # for all the teams in the member's competition
-                        school_scores_of_competition+=[x.score for x in data.models.EventMemberInstance.objects.filter(team=team) if x.score<=x.team.competition.number_of_teams_competed] # add the teams scores
-                    average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
-                    average_scores_of_competition_cache[competition.id] = average_score_of_team
-                score=average_score_of_team/competition.number_of_teams_competed-member.event_member_instance.score/competition.number_of_teams_competed
-                
-                #update members_to_skill_level and members_to_experience
-                if member.name in members_to_skill_level:
-                    if member.event_member_instance.event_name in members_to_skill_level[member.name]:
-                        members_to_skill_level[member.name][member.event_member_instance.event_name]+=score
-                        members_to_experience[member.name][member.event_member_instance.event_name]+=1
-                    else:
-                        members_to_skill_level[member.name][member.event_member_instance.event_name]=score
-                        members_to_experience[member.name][member.event_member_instance.event_name]=1
-                else:
-                    members_to_skill_level[member.name]={}
-                    members_to_skill_level[member.name][member.event_member_instance.event_name]=score
-                    members_to_experience[member.name]={}
-                    members_to_experience[member.name][member.event_member_instance.event_name]=1
-        
+        members_to_skill_level = dict()
+        members_to_experience = dict()
+        members_to_data = dict()
+        all_events=set()
+        for c in data.models.Competition.objects.filter(user=request.user).order_by('date'):
+            emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c)
+            school_scores_of_competition = [x.score for x in data.models.EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
+            average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+            for emi in emis_list:
+                all_events.add(emi.event_name)
+                if emi.score <= c.number_of_teams_competed:
+                    score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                    event = emi.event_name
+                    members = [m.name for m in data.models.Member.objects.filter(event_member_instance = emi)]
+                    
+                    for m in members:
+                        if m in members_to_experience:
+                            if event in members_to_experience[m]:
+                                members_to_experience[m][event] += 1
+                                members_to_data[m][event] += "<li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                            else:
+                                members_to_experience[m][event] = 1
+                                members_to_skill_level[m][event] = 0
+                                members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                        else:
+                            members_to_experience[m] = {}
+                            members_to_data[m] = {}
+                            members_to_skill_level[m] = {}
+                            members_to_skill_level[m][event] = 0
+                            members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                            members_to_experience[m][event] = 1
+                    total_experience = sum([members_to_experience[member][event] for member in members])
+                    # total_skill = sum([members_to_skill_level[member][event] for member in members])
+                    for m in members:
+                        # if total_skill != 0:
+                            # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
+                        # else:
+                        members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
+
         #shuffle dictionary to ensure randomness if two or more people have skills are the same
         keys = list(members_to_skill_level.keys())
         random.shuffle(keys)
@@ -953,6 +963,11 @@ def frontend_generate(request, pk):
         
         min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
         max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
+        
+        for m in members_to_experience:
+            for e in members_to_experience[m]:
+                if members_to_experience[m][e] == 1:
+                    members_to_skill_level[m][e] = min_score
         # scale members_to_skill_level to be between 0 and 1
         for m in members_to_skill_level:
             for e in members_to_skill_level[m]:

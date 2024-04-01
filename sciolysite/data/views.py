@@ -325,8 +325,13 @@ def skillView(request):
                         members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
                         members_to_experience[m][event] = 1
                 total_experience = sum([members_to_experience[member][event] for member in members])
+                # total_skill = sum([members_to_skill_level[member][event] for member in members])
                 for m in members:
+                    # if total_skill != 0:
+                        # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
+                    # else:
                     members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
+                    # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
     # print(members_to_skill_level)
 
     # # print(members_to_skill_level)
