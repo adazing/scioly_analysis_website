@@ -973,7 +973,8 @@ def frontend_generate(request, pk):
             for e in members_to_skill_level[m]:
                 members_to_skill_level[m][e]=(members_to_skill_level[m][e]-min_score)/(max_score-min_score)
             members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
-        members_to_skill_level = {m:{e:members_to_skill_level[m][e] for e in members_to_skill_level[m] if e in available_events} for m in members_to_skill_level}
+            
+        members_to_skill_level = {m:{e:members_to_skill_level[m][e] for e in members_to_skill_level[m] if e in available_events} for m in members_to_skill_level if m in available_members}
         
         # rank the members
         ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())

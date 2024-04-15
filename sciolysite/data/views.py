@@ -164,6 +164,52 @@ def teamView(request, pk):
         return render(request, "data/team_view.html", context)
     raise Http404
 
+# @login_required
+# def teamView(request, pk):
+#     team=get_object_or_404(Team, id=pk)
+#     if team.competition.user.id == request.user.id:
+#         results=[]
+#         event_member_instance_list = EventMemberInstance.objects.filter(team=team)
+#         results2 = {}
+#         for e_m_i in event_member_instance_list:
+#             result=[]
+#             result.append(e_m_i.event_name)
+#             member_list = Member.objects.filter(event_member_instance=e_m_i)
+#             text_color = '#FFF'
+#             if e_m_i.score<=10:
+#                 score_color = "#04ff00" # green
+#                 text_color = '#000000'
+#             elif e_m_i.score<=20:
+#                 score_color = "#ffff01" # yellow
+#                 text_color = '#000000'
+#             elif e_m_i.score<=30:
+#                 score_color = "#ff9a02" # orange
+#                 text_color = '#000000'
+#             else:
+#                 score_color = "#fe0100" # red
+#             # score_color=max(0,(e_m_i.score/team.competition.number_of_teams_competed)*100)
+#             for x in range(3):
+#                 if x>=len(member_list):
+#                     result.append("")
+#                 else:
+#                     result.append(member_list[x].name)
+#                     if member_list[x].name in results2:
+#                         results2[member_list[x].name].append((e_m_i.event_name+" ("+str(e_m_i.score)+")",score_color,text_color))
+#                     else:
+#                         results2[member_list[x].name]=[(e_m_i.event_name+" ("+str(e_m_i.score)+")",score_color,text_color)]
+#             result.append(str(e_m_i.score))
+#             result.append((score_color, text_color))
+#             results.append(result)
+
+#         context = {
+#             "team" : team,
+#             "results" : results,
+#             "results2" : results2
+#         }
+#         return render(request, "data/team_view.html", context)
+#     raise Http404
+
+
 @login_required
 def competitionListView(request):
     competitions = Competition.objects.filter(user=request.user.id)
