@@ -867,7 +867,7 @@ def frontend_generate(request, pk):
     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
     if generated_competition_settings.user.id == request.user.id:
         # teams that are in generated_competition_settings
-        teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=True)
+        teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
         available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)]
         available_events = sorted([e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)])
         events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
@@ -878,15 +878,21 @@ def frontend_generate(request, pk):
         worst_preference_amount = max([m_e[2] for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
         member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name if mme.event is not None else None] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)]
         officers = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="O")]
-        required_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="R", )]
-        required_members_on_specific_teams = [[r.member.name, r.team] for t in teams for r in RequiredMemberToTeam.objects.filter(team__generated_competition_settings = generated_competition_settings)]
+        required_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="R")]
+        print(required_members)
+        required_members_on_specific_teams = {str(t.id):[] for t in teams}
+        print(required_members_on_specific_teams)
+        for r_member in RequiredMemberToTeam.objects.filter(team__generated_competition_settings = generated_competition_settings):
+            required_members_on_specific_teams[str(r_member.team.id)].append(r_member.member.name)
+        print(required_members_on_specific_teams)
+        # required_members_on_specific_teams = [[r.member.name, r.team] for t in teams for r in RequiredMemberToTeam.objects.filter(team__generated_competition_settings = generated_competition_settings)]
         seniors = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, is_senior=True)]
         conflicting_events=[[e.name for e in AvailableEvent.objects.filter(conflict=c, generated_competition_settings=generated_competition_settings)] for c in ConflictingEvents.objects.filter(generated_competition_settings=generated_competition_settings)]
         event_types = [[e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, event_type = et)] for et in EventType.objects.filter(generated_competition_settings=generated_competition_settings)]
         
         
         required_member_event_pairs = [[me.member.name, me.event.name] for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings, required = True)]
-        print(required_member_event_pairs)
+        # print(required_member_event_pairs)
         members_to_ranked_preferences = dict()
         # add members with ranked_preferences
         for member, event, rank in member_event_pairs:
@@ -908,8 +914,8 @@ def frontend_generate(request, pk):
         members_to_skill_level=dict()   
                 
         member_list=[m for m in data.models.Member.objects.filter(event_member_instance__team__competition__user=request.user) if m.name in available_members]
-        print(available_members)
-        print(member_list)
+        # print(available_members)
+        # print(member_list)
         average_scores_of_competition_cache = {}
         members_to_skill_level = dict()
         members_to_experience = dict()
@@ -954,8 +960,8 @@ def frontend_generate(request, pk):
         keys = list(members_to_skill_level.keys())
         random.shuffle(keys)
         members_to_skill_level={key:members_to_skill_level[key] for key in keys}
-        print("hi4")
-        print(members_to_skill_level)
+        # print("hi4")
+        # print(members_to_skill_level)
         members_to_experience={key:members_to_experience[key] for key in keys}
 
         min_total_score = min([sum(members_to_skill_level[m].values()) for m in members_to_skill_level])
@@ -986,20 +992,22 @@ def frontend_generate(request, pk):
         ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())
                 
         # GENERATE TEAM MEMBERS
-        print("hi33")
-        print(members_to_skill_level)
-        print(members_to_total_skill_level)
-        print(ranked_members)
-        print(teams)
-        print("officers")
-        print(officers)
-        print(required_members)
-        print(required_members_on_specific_teams)
-        print(seniors)
-        ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
-        print(ranked_members)
+        # print("hi33")
+        # print(members_to_skill_level)
+        # print(members_to_total_skill_level)
+        # print(ranked_members)
+        # print(teams)
+        # print("officers")
+        # print(officers)
+        # print(required_members)
+        # print(required_members_on_specific_teams)
+        # print(seniors)
+        # ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
+        # required_members = 
+        # print(ranked_members)
         context = {
             "available_members" : available_members,
+            "required_members_on_specific_teams" : required_members_on_specific_teams,
             "ranked_members": ranked_members,
             "teams" : [t.team_size for t in teams],
             "members_to_ranked_preferences" : members_to_ranked_preferences,
