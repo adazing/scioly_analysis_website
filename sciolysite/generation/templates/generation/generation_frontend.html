@@ -453,7 +453,8 @@
       
 
     let available_events = {{available_events|safe}};
-    let ranked_members = {{ranked_members|safe}};
+    {% comment %} let ranked_members = {{ranked_members|safe}}; {% endcomment %}
+    let min_score = {{min_score}};
     let teams = {{teams|safe}};
     let members_to_ranked_preferences = {{members_to_ranked_preferences|safe}};
     let member_member_event_pairs = {{member_member_event_pairs|safe}};
@@ -466,7 +467,12 @@
     let event_types = {{event_types|safe}};
     let min_event_experience = {{generated_competition_settings.min_event_experience}};
     let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
-    let max_events_per_member = {{generated_competition_settings.max_events_per_member}};
+
+    // CHANGEDDDDDD STUFFF HISUGIESYURYYUTRYUNTFCDFVYUVCDTFVYGBUHNIJVFTCVYGBUHNIJUBYVFTYINJVYFYGINVFTCFVYUBNHBVFTCVYGBUHBVTCFVYGBUHNGVFTCVYGBUHNBVFTCVGB
+
+
+    {% comment %} let max_events_per_member = {{generated_competition_settings.max_events_per_member}}; {% endcomment %}
+    let max_events_per_member = 4;
     let min_events_per_member = {{generated_competition_settings.min_events_per_member}};
     let max_num_of_build_events_per_member = {{generated_competition_settings.max_num_of_build_events_per_member}};
     {% comment %} let conflicting_events = {{conflicting_events|safe}}; {% endcomment %}
@@ -726,33 +732,30 @@
     }
 
 
-    function calculate_team_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences) {
-        {% comment %} var empty_spots = Object.keys(team).map(function (e) {
-            return 2 - team[e].length + (events_with_3_members.includes(e) ? 1 : 0);
-        }); {% endcomment %}
-        //console.log("hi");
-        //console.log(team);
-        //console.log(required_member_event_pairs);
-        
-        {% comment %} var required_member_event_preferences_not_yet_fulfilled = required_member_event_pairs.filter(function (me) {
-            return !team[me[1]].includes(me[0]);
-        }); {% endcomment %}
-        {% comment %} var total_preference_score = 0; {% endcomment %}
+    function calculate_team_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score) {
         var total_skill_score = 0;
-    
-        for (var e in team){
-            for (var m of team[e]){
-                total_skill_score += members_to_skill_level[m][e]
+        {% comment %} console.log(team);
+        console.log(min_score);
+        console.log(members_to_skill_level); {% endcomment %}
+        for (var e in team) {
+            for (var m of team[e]) {
+                if (members_to_skill_level[m][e] !== undefined) {
+                    total_skill_score += members_to_skill_level[m][e];
+                } else {
+                    total_skill_score += min_score;
+                    {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
+                }
+                // Log the current total_skill_score to trace the calculation
+                {% comment %} console.log(`Current total_skill_score: ${total_skill_score}`); {% endcomment %}
             }
         }
         return total_skill_score;
     }
 
 
-
     {% comment %} console.log(make_team2(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member)); {% endcomment %}
 
-    function make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members) {
+    function make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score) {
         var team = {};
         // fill best team with empty slots
         for (var i = 0; i < available_events.length; i++) {
@@ -766,7 +769,8 @@
         {% comment %} // room for more spots beyond max_spots_per_member {% endcomment %}
         {% comment %} var extra_spots = available_events.length*2 + events_with_3_members.length - max_spots_per_member * team_size; {% endcomment %}
         
-        // add required members
+
+        //iterate until all the people are on the team
         while (team_members.length < required_members.length){ // must include all required members
             var best_member = null;
             var best_score = Number.NEGATIVE_INFINITY;
@@ -781,33 +785,39 @@
                     for (let [event, level] of Object.entries(members_to_skill_level[member])){
                         // can add new event-member pair
                         if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                            if (member=="Arjun Sriskanthan"){
+                                console.log("mad 1");
+                                console.log(event);
+                            }
                             new_team[event].push(member);
                             events_added += 1;
                         // can replace bad event-member pair?
                         }else{
                             var best_temp_team = JSON.parse(JSON.stringify(new_team));
-                            var best_temp_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                            var changed = false;
+                            var best_temp_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                             for (let other_member of new_team[event]){
                                 temp_team = JSON.parse(JSON.stringify(new_team));
-                                let count = 0;
-                                for (const key in temp_team) {
-                                    if (team.hasOwnProperty(key)) {
-                                      count += temp_team[key].filter(item => item === other_member).length;
-                                    }
-                                }
-                                if (count > 0){
+                                let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
+                                if (count > min_events_per_member){
                                     temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
                                     if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
                                         temp_team[event].push(member);
-                                        var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                                        var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                         if (temp_score>best_temp_score){
+                                            changed = true;
                                             best_temp_team = JSON.parse(JSON.stringify(temp_team));
                                             best_temp_score = temp_score;
                                         }
                                     }
                                 }
                             }
-                            if (JSON.parse(JSON.stringify(best_temp_team)) != JSON.parse(JSON.stringify(new_team))){ // changed
+                            if (changed){ // changed
+                                if (member=="Arjun Sriskanthan"){
+                                    console.log("mad 2");
+                                    console.log(best_temp_team);
+                                    console.log(new_team);
+                                }
                                 events_added += 1;
                                 new_team = JSON.parse(JSON.stringify(best_temp_team));
                             }
@@ -817,42 +827,67 @@
                             break;
                         }
                     }
-                    // no more empty spots left, must replace even if it is not optimal.
+                    {% comment %} if (member=="Arjun Sriskanthan"){
+                        console.log(events_added);
+                        console.log(min_events_per_member);
+                    } {% endcomment %}
+                    // no more empty spots left, must replace or add to event they don't have experience with even if it is not optimal.
                     while (events_added < min_events_per_member){ // make sure they at least follow the requirements & already know that no more empty spots left
+                        {% comment %} if (member=="Arjun Sriskanthan"){
+                            console.log("should be in the process of fixing");
+                        } {% endcomment %}
                         var best_overall_temp_team = JSON.parse(JSON.stringify(new_team));
-                        var best_overall_temp_score = 0;
-                        for (let [event, level] of Object.entries(members_to_skill_level[member])){ // MIGHT NEED TO CHANGE THIS IF CHANGE HOW TEAM IS SCORED!!!!!!!
-                            for (let other_member of new_team[event]){
-                                temp_team = JSON.parse(JSON.stringify(new_team));
-                                // make sure other_member is not at min
-                                let count = 0;
-                                for (const key in temp_team) {
-                                    if (team.hasOwnProperty(key)) {
-                                      count += temp_team[key].filter(item => item === other_member).length;
-                                    }
+                        var best_overall_temp_score = Number.NEGATIVE_INFINITY;
+                        var changed = false;
+                        for (let event of available_events){ // MIGHT NEED TO CHANGE THIS IF CHANGE HOW TEAM IS SCORED!!!!!!!
+                            temp_team = JSON.parse(JSON.stringify(new_team));
+                            // there is room in event
+                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                                temp_team[event].push(member);
+                                temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                                if (temp_score > best_overall_temp_score){
+                                    best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
+                                    best_overall_temp_score = temp_score;
+                                    changed = true;
+                                    {% comment %} console.log("hi");
+                                    console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                 }
-                                if (count>min_events_per_member){
-                                    temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
-                                        temp_team[event].push(member);
-                                        var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
-                                        if (temp_score>best_overall_temp_score){
-                                            best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
-                                            best_overall_temp_score = temp_score;
+                            }else{ // there is no room left in event, need to replace
+                                for (let other_member of new_team[event]){
+                                    if (other_member == member){
+                                        break;
+                                    }
+                                    temp_team = JSON.parse(JSON.stringify(new_team));
+                                    // make sure other_member is not at min
+                                    let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
+                                    if (count>min_events_per_member){
+                                        temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
+                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                            temp_team[event].push(member);
+                                            var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                                            if (temp_score>best_overall_temp_score){
+                                                best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
+                                                best_overall_temp_score = temp_score;
+                                                changed = true;
+                                                {% comment %} console.log("hi");
+                                                console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
+                                            }
                                         }
                                     }
                                 }
                             }
-                            if (JSON.parse(JSON.stringify(best_overall_temp_team)) != JSON.parse(JSON.stringify(new_team))){ // changed
-                                events_added += 1;
-                                new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
-                            }else{
-                                break;
-                            }
 
                         }
+                        if (changed){ // changed
+                            events_added += 1;
+                            new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
+                        }else{
+                            {% comment %} console.log("bad and sad");
+                            console.log(team); {% endcomment %}
+                            break;
+                        }
                     }
-                    new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                    new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                     if (new_team_score >=best_score){
                         best_team = JSON.parse(JSON.stringify(new_team));
                         best_member = member;
@@ -868,112 +903,139 @@
         }
 
 
+
         //iterate until all the people are on the team
-        while (team_members.length < team_size){
+        while (team_members.length < team_size){ // must include all required members
             var best_member = null;
             var best_score = Number.NEGATIVE_INFINITY;
             var best_team = JSON.parse(JSON.stringify(team));
-            // for every available member
-            for (let [member, events] of Object.entries(members_to_skill_level))
-                var best_member = null;
-                var best_score = Number.NEGATIVE_INFINITY;
-                var best_team = JSON.parse(JSON.stringify(team));
-                // for every available member
-                for (let [member, events] of Object.entries(members_to_skill_level)){
-                    if (!team_members.includes(member)){
-                        var new_team = JSON.parse(JSON.stringify(team));
-                        var events_added = 0;
-                        // STORAGE OF BEST ADDITIONS THAT U UPDATE OVER TIME?
-                        var temp_team = JSON.parse(JSON.stringify(new_team));
-                        for (let [event, level] of Object.entries(events)){
-                            if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
-                                new_team[event].push(member);
-                                events_added += 1;
-                            }else{
-                                var best_temp_team = JSON.parse(JSON.stringify(new_team));
-                                var best_temp_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
-                                for (let other_member of new_team[event]){
-                                    temp_team = JSON.parse(JSON.stringify(new_team));
-                                    let count = 0;
-                                    for (const key in temp_team) {
-                                        if (team.hasOwnProperty(key)) {
-                                          count += temp_team[key].filter(item => item === other_member).length;
+            // for every required member
+            for (let [member, events] of Object.entries(members_to_skill_level)){
+                if (!team_members.includes(member)){
+                    var new_team = JSON.parse(JSON.stringify(team));
+                    var events_added = 0;
+                    // STORAGE OF BEST ADDITIONS THAT U UPDATE OVER TIME?
+                    var temp_team = JSON.parse(JSON.stringify(new_team));
+                    for (let [event, level] of Object.entries(members_to_skill_level[member])){
+                        // can add new event-member pair
+                        if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                            if (member=="Arjun Sriskanthan"){
+                                console.log("mad 1");
+                                console.log(event);
+                            }
+                            new_team[event].push(member);
+                            events_added += 1;
+                        // can replace bad event-member pair?
+                        }else{
+                            var best_temp_team = JSON.parse(JSON.stringify(new_team));
+                            var changed = false;
+                            var best_temp_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                            for (let other_member of new_team[event]){
+                                temp_team = JSON.parse(JSON.stringify(new_team));
+                                let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
+                                if (count > min_events_per_member){
+                                    temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
+                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                        temp_team[event].push(member);
+                                        var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                                        if (temp_score>best_temp_score){
+                                            changed = true;
+                                            best_temp_team = JSON.parse(JSON.stringify(temp_team));
+                                            best_temp_score = temp_score;
                                         }
                                     }
-                                    if (count > 0){
-                                        temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
-                                            temp_team[event].push(member);
-                                            var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
-                                            if (temp_score>best_temp_score){
-                                                best_temp_team = JSON.parse(JSON.stringify(temp_team));
-                                                best_temp_score = temp_score;
-                                            }
-                                        }
-                                    }
-                                    }
-                                if (JSON.parse(JSON.stringify(best_temp_team)) != JSON.parse(JSON.stringify(new_team))){ // changed
-                                    events_added += 1;
-                                    new_team = JSON.parse(JSON.stringify(best_temp_team));
                                 }
                             }
-                            if(events_added >= max_spots_per_member){
-                                {% comment %} console.log("break");
-                                console.log(events_added); {% endcomment %}
-                                break;
+                            if (changed){ // changed
+                                if (member=="Arjun Sriskanthan"){
+                                    console.log("mad 2");
+                                    console.log(best_temp_team);
+                                    console.log(new_team);
+                                }
+                                events_added += 1;
+                                new_team = JSON.parse(JSON.stringify(best_temp_team));
                             }
                         }
-                        while (events_added < min_events_per_member){ // make sure they at least follow the requirements & already know that no more empty spots left
-                            var best_overall_temp_team = JSON.parse(JSON.stringify(new_team));
-                            var best_overall_temp_score = 0;
-                            for (let [event, level] of Object.entries(members_to_skill_level[member])){
-                                {% comment %} var best_temp_team = JSON.parse(JSON.stringify(new_team));
-                                var best_temp_score = 0; {% endcomment %}
+                        // done with max events!
+                        if(events_added >= max_spots_per_member){
+                            break;
+                        }
+                    }
+                    {% comment %} if (member=="Arjun Sriskanthan"){
+                        console.log(events_added);
+                        console.log(min_events_per_member);
+                    } {% endcomment %}
+                    // no more empty spots left, must replace or add to event they don't have experience with even if it is not optimal.
+                    while (events_added < min_events_per_member){ // make sure they at least follow the requirements & already know that no more empty spots left
+                        {% comment %} if (member=="Arjun Sriskanthan"){
+                            console.log("should be in the process of fixing");
+                        } {% endcomment %}
+                        var best_overall_temp_team = JSON.parse(JSON.stringify(new_team));
+                        var best_overall_temp_score = Number.NEGATIVE_INFINITY;
+                        var changed = false;
+                        for (let event of available_events){ // MIGHT NEED TO CHANGE THIS IF CHANGE HOW TEAM IS SCORED!!!!!!!
+                            temp_team = JSON.parse(JSON.stringify(new_team));
+                            // there is room in event
+                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                                temp_team[event].push(member);
+                                temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                                if (temp_score > best_overall_temp_score){
+                                    best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
+                                    best_overall_temp_score = temp_score;
+                                    changed = true;
+                                    {% comment %} console.log("hi");
+                                    console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
+                                }
+                            }else{ // there is no room left in event, need to replace
                                 for (let other_member of new_team[event]){
+                                    if (other_member == member){
+                                        break;
+                                    }
                                     temp_team = JSON.parse(JSON.stringify(new_team));
                                     // make sure other_member is not at min
-                                    let count = 0;
-                                    for (const key in temp_team) {
-                                        if (team.hasOwnProperty(key)) {
-                                          count += temp_team[key].filter(item => item === other_member).length;
-                                        }
-                                    }
+                                    let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
                                     if (count>min_events_per_member){
                                         temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
                                         if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
                                             temp_team[event].push(member);
-                                            var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                                            var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                             if (temp_score>best_overall_temp_score){
                                                 best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
                                                 best_overall_temp_score = temp_score;
+                                                changed = true;
+                                                {% comment %} console.log("hi");
+                                                console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                             }
                                         }
                                     }
                                 }
-                                if (JSON.parse(JSON.stringify(best_overall_temp_team)) != JSON.parse(JSON.stringify(new_team))){ // changed
-                                    events_added += 1;
-                                    new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
-                                }else{
-                                    break;
-                                }
-    
                             }
+
                         }
-                        new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
-                        if (new_team_score >=best_score){
-                            best_team = JSON.parse(JSON.stringify(new_team));
-                            best_member = member;
-                            best_score = new_team_score;
+                        if (changed){ // changed
+                            events_added += 1;
+                            new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
+                        }else{
+                            {% comment %} console.log("bad and sad");
+                            console.log(team); {% endcomment %}
+                            break;
                         }
                     }
+                    new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                    if (new_team_score >=best_score){
+                        best_team = JSON.parse(JSON.stringify(new_team));
+                        best_member = member;
+                        best_score = new_team_score;
+                    }
                 }
-                team = JSON.parse(JSON.stringify(best_team));
-                console.log(best_member);
-                console.log(team);
-                team_members.push(best_member);
-    
             }
-        
+            team = JSON.parse(JSON.stringify(best_team));
+            console.log(best_member);
+            console.log(team);
+            team_members.push(best_member);
+
+        }
+        console.log("last fixes");
         // fix team
         var empty_spots = Object.keys(team).map(function (e) {
             return 2 - team[e].length + (events_with_3_members.includes(e) ? 1 : 0);
@@ -981,27 +1043,33 @@
         var num_empty_spots = empty_spots.reduce(function (a, b) {
             return a + b;
         }, 0);
+        console.log(num_empty_spots);
         while (num_empty_spots>0){
             console.log("heyyy empty")
-            best_score = 0;
+            best_score = Number.NEGATIVE_INFINITY;
             best_team = null;
-            var changed = false;
+            {% comment %} var changed = false; {% endcomment %}
             for (event of available_events){
                 for (member of team_members){
                     new_team = JSON.parse(JSON.stringify(team));
                     if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
                         new_team[event].push(member);
-                        new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences);
+                        console.log(new_team);
+                        new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                        console.log("blah");
+                        console.log(new_team_score);
                         if (new_team_score>best_score){
+                            console.log("hi");
                             best_team = JSON.parse(JSON.stringify(new_team));
                             best_score = new_team_score;
-                            changed = true;
+                            {% comment %} changed = true; {% endcomment %}
                         }
                     }
                 }
             }
-            if (changed == true){
+            if (best_team != null){
                 team = JSON.parse(JSON.stringify(best_team));
+                num_empty_spots -= 1;
             }else{
                 break;
             }
@@ -1015,7 +1083,8 @@
 
     {% comment %} console.log("final"); {% endcomment %}
 
-    console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang"]));
+    console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang", "Eli Tabak"], min_score));
+    {% comment %} console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, [], min_score)); {% endcomment %}
 
 
     {% comment %} function generateTeams2(callback) {
