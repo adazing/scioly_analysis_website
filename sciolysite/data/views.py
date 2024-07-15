@@ -347,10 +347,12 @@ def skillView(request):
         emis_list = EventMemberInstance.objects.filter(team__competition=c)
         school_scores_of_competition = [x.score for x in EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
         average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+        competition_difficulty = average_score_of_team/c.number_of_teams_competed
         for emi in emis_list:
             all_events.add(emi.event_name)
             if emi.score <= c.number_of_teams_competed:
-                score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                # score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                score = competition_difficulty * (c.number_of_teams_competed - emi.score)/(c.number_of_teams_competed)
                 event = emi.event_name
                 members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
                 
@@ -370,13 +372,14 @@ def skillView(request):
                         members_to_skill_level[m][event] = 0
                         members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
                         members_to_experience[m][event] = 1
-                total_experience = sum([members_to_experience[member][event] for member in members])
+                # total_experience = sum([members_to_experience[member][event] for member in members])
                 # total_skill = sum([members_to_skill_level[member][event] for member in members])
                 for m in members:
                     # if total_skill != 0:
                         # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
                     # else:
-                    members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
+                    members_to_skill_level[m][event] += score
+                    # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
                     # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
     # print(members_to_skill_level)
 
@@ -424,6 +427,10 @@ def skillView(request):
     # print(members_to_data)
     
     # print(members_to_experience)
+    
+    # for m in members_to_skill_level:
+    #     for e in members_to_skill_level[m]:
+    #         members_to_skill_level[m][e] = members_to_skill_level[m][e]/members_to_experience[m][e]
     
     min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
     max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])

@@ -926,10 +926,11 @@ def frontend_generate(request, pk):
             emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c)
             school_scores_of_competition = [x.score for x in data.models.EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
             average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+            competition_difficulty = average_score_of_team/c.number_of_teams_competed
             for emi in emis_list:
                 # all_events.add(emi.event_name)
                 if emi.score <= c.number_of_teams_competed and emi.event_name in available_events: # don't count if disqualified or event_name not in available_events
-                    score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                    score = competition_difficulty * (c.number_of_teams_competed - emi.score)/(c.number_of_teams_competed)
                     event = emi.event_name
                     members = [m.name for m in data.models.Member.objects.filter(event_member_instance = emi)]
                     
@@ -949,7 +950,7 @@ def frontend_generate(request, pk):
                             members_to_skill_level[m][event] = 0
                             # members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
                             members_to_experience[m][event] = 1
-                    total_experience = sum([members_to_experience[member][event] for member in members])
+                    # total_experience = sum([members_to_experience[member][event] for member in members])
                     # total_skill = sum([members_to_skill_level[member][event] for member in members])
                     for m in members:
                         # if total_skill != 0:
@@ -957,7 +958,7 @@ def frontend_generate(request, pk):
                         # else:
                         # if members_to_experience[m][event]==1: # first time
                         #     first_time_scores[event].append(members_to_experience[m][event]/total_experience * score)
-                        members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
+                        members_to_skill_level[m][event] += score
 
         #shuffle dictionary to ensure randomness if two or more people have skills are the same
         keys = list(members_to_skill_level.keys())
@@ -986,12 +987,14 @@ def frontend_generate(request, pk):
                 #     members_to_skill_level[m][e] = first_time_scores[e]
             # for e in members_to_skill_level[m]:
             #     members_to_skill_level[m][e]=(members_to_skill_level[m][e]-min_score)/(max_score-min_score)
-            member_to_events_skills = members_to_skill_level[m].copy()
+            # member_to_events_skills = members_to_skill_level[m].copy()
             # while len(members_to_skill_level[m])>0:
-            for e in members_to_skill_level[m]:
-                if members_to_experience[m][e] == 1:
-                    del member_to_events_skills[e]
-            members_to_skill_level[m] = member_to_events_skills
+            for e in available_events:
+                if e in members_to_skill_level[m]:
+                    if members_to_experience[m][e] == 1:
+                        members_to_skill_level[m][e] = min_score
+                else:
+                    members_to_skill_level[m][e] = min_score
             members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
         
         # for m in members_to_skill_level:
