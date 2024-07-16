@@ -737,6 +737,7 @@
         {% comment %} console.log(team);
         console.log(min_score);
         console.log(members_to_skill_level); {% endcomment %}
+        {% comment %} console.log(required_member_event_pairs); {% endcomment %}
         for (var e in team) {
             for (var m of team[e]) {
                 if (members_to_skill_level[m][e] !== undefined) {
@@ -744,6 +745,14 @@
                 } else {
                     total_skill_score += min_score;
                     {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
+                }
+                let is_required = required_member_event_pairs.some(arr => 
+                    arr.length === [m, e].length && 
+                    arr.every((value, index) => value === [m, e][index])
+                );
+                if (is_required){
+                    {% comment %} console.log("hi"); {% endcomment %}
+                    total_skill_score += 10000; // large number
                 }
                 // Log the current total_skill_score to trace the calculation
                 {% comment %} console.log(`Current total_skill_score: ${total_skill_score}`); {% endcomment %}
@@ -1094,7 +1103,11 @@
         let orig_score = 0;
         let best_temp_team = null;
         let best_temp_score = Number.NEGATIVE_INFINITY;
+        {% comment %} console.log("looking");
+        console.log(deep_copy(new_temp_team)); {% endcomment %}
         for (let event of available_events){
+            {% comment %} console.log(event, temp_member);
+            console.log(is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)); {% endcomment %}
             if (is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
                 {% comment %} console.log("good"); {% endcomment %}
                 // add member to event if possible
@@ -1102,13 +1115,18 @@
                 temp_team[event].push(temp_member);
                 let new_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                 {% comment %} console.log(new_score - orig_score); {% endcomment %}
+                {% comment %} console.log("adding", new_score); {% endcomment %}
                 if (new_score - orig_score >= best_temp_score){
+
                     best_temp_team = deep_copy(temp_team);
                     best_temp_score = new_score - orig_score;
+                }
             }else{
-                console.log("bad")
+                {% comment %} console.log("trying to substitute"); {% endcomment %}
+                {% comment %} console.log("bad"); {% endcomment %}
                 // try replacing any of the existing members in the event if the new member is better than the old member at the event
                 for (let other_member of new_temp_team[event]){
+                    {% comment %} console.log("removing other member", other_member); {% endcomment %}
                     let count = Object.keys(new_temp_team).filter(e => new_temp_team[e].includes(other_member)).length;
                     if ((count > min_events_per_member) && !(required_member_event_pairs.includes([other_member, event]))){
                         let temp_team = deep_copy(new_temp_team);
@@ -1118,9 +1136,14 @@
                             {% comment %} console.log("valid"); {% endcomment %}
                             temp_team[event].push(temp_member);
                             let new_temp_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
-                            console.log("comparison");
+                            {% comment %} console.log("substituting", new_temp_score); {% endcomment %}
+                            {% comment %} console.log("comparison");
                             console.log(new_temp_score - orig_temp_score);
-                            console.log(best_temp_score);
+                            console.log(best_temp_score); {% endcomment %}
+                            if (temp_member=="Eden Hoong" && other_member=="Ada Langford" && event=="Wind Power"){
+                                
+                                console.log(new_temp_score, orig_temp_score);
+                            }
                             if (new_temp_score - orig_temp_score >= best_temp_score){
                                 best_temp_team = deep_copy(temp_team);
                                 best_temp_score = new_temp_score - orig_temp_score;
@@ -1130,9 +1153,8 @@
                 }
             }
         }
+        return best_temp_team;
     }
-    return best_temp_team;
-}
 
 function find_optimal_member_addition(team, team_members, member_options, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size){
     let best_new_team = null;
@@ -1142,6 +1164,7 @@ function find_optimal_member_addition(team, team_members, member_options, member
         if (!team_members.includes(new_member)){
             let new_team = deep_copy(team);
             let count = Object.keys(new_team).filter(e => new_team[e].includes(new_member)).length;
+            {% comment %} let count = 0; {% endcomment %}
             let changed = true;
             while (count < max_events_per_member){
                 let best_temp_team = deep_copy(find_optimal_event_addition(new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size));
@@ -1178,12 +1201,13 @@ function make_team4(available_events, members_to_ranked_preferences, member_memb
     let team_members = [];
 
     for ([member, event] of required_member_event_pairs){
-        if (!required_member.includes(member)){
+        if (!required_members.includes(member)){
             required_members.push(member);
         }
+        team[event].push(member);
     }
     while (team_members.length < required_members.length){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, Object.keys(members_to_skill_level), members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size);
+        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, required_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size);
         team = deep_copy(best_new_team);
         team_members.push(best_new_member);
     }
@@ -1192,11 +1216,12 @@ function make_team4(available_events, members_to_ranked_preferences, member_memb
         team = deep_copy(best_new_team);
         team_members.push(best_new_member);
     }
+    console.log(team_members);
     return team;
 }
 
 {% comment %} console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang", "Eli Tabak"], min_score)); {% endcomment %}
-console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, [], min_score));
+console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, [["Ada Langford", "Wind Power"], ["Kevin Dong", "Robot Tour"]], event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Ada Langford"], min_score));
 
 
 {% comment %} console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, [], min_score)); {% endcomment %}
