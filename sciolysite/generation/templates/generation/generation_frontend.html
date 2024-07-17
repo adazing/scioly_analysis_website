@@ -746,6 +746,9 @@
                     total_skill_score += min_score;
                     {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
                 }
+                for(e of members_to_ranked_preferences){
+                    
+                }
                 let is_required = required_member_event_pairs.some(arr => 
                     arr.length === [m, e].length && 
                     arr.every((value, index) => value === [m, e][index])
