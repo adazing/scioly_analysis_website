@@ -219,7 +219,8 @@ class CompetitionSettingsForm(ModelForm):
 class TeamForm(ModelForm):
     required_members = forms.ModelMultipleChoiceField(
         widget = forms.CheckboxSelectMultiple,
-        queryset=AvailableMember.objects.filter(status="R"), # FIX: SHOWS MEMBERS NOT SPECIFIC TO COMPETITION
+        queryset = AvailableMember.objects.all(),
+        # queryset=AvailableMember.objects.filter(status="R"), # FIX: SHOWS MEMBERS NOT SPECIFIC TO COMPETITION
         required=False
     )
     class Meta:

@@ -1,0 +1,4 @@
+- tanh activation function for skills
+- change skills based on preferences too, in order to avoid problems with too much looping?
+- try to balance skill on all the events?
+- fix skills (0 or negative? what to do with neutral? idk - makybe fix algorithm?)

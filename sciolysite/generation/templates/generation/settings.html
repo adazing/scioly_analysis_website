@@ -9,96 +9,134 @@
                 {% csrf_token %}
                 {{ form|crispy }}
                 <br>
-                <ul class="list-group">
-                    <li class="list-group-item active lead">Example Creation of Available Events CSV Data Using Google Sheets:</li>
-                    <li class="list-group-item">
-                        <p><b>Step 1:</b> Make data. Requirements:</p>
-                        <ul>
-                            <li>There is no header.</li>
-                            <li>All available events must be mentioned once, and there must not be any repeats.</li>
-                            <li>Each row corresponds to a group of events that are similar.</li>
-                            <li>All events mentioned should be formatted in the same way as the other data.</li>
-                            <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
-                            <li>There is no limit to row length or row number.</li>
-                            <li>Any event with three members (default is two) should be indicated as such with a "(3)" next to the name.</li>
-                            <li>There should be no other information in the sheet.</li>
-                        </ul>
-                        <br>
-                        <img class="rounded mx-auto d-block w-100" style="" src="{% static 'images/available_events.png' %}"> 
-                    </li>
-                    <li class="list-group-item"><b>Step 2:</b> Download CSV data.<br>
-                        <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
-                        {% comment %} <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/download_csv.png' %}">  {% endcomment %}
-                    </li>
-                  </ul>
-                  <br>
-                  <ul class="list-group">
-                    <li class="list-group-item active lead">Example Creation of Conflicting Events CSV Data Using Google Sheets:</li>
-                    <li class="list-group-item">
-                        <p><b>Step 1:</b> Make data. Requirements:</p>
-                        <ul>
-                            <li>There is no header.</li>
-                            <li>Not all events need to be mentioned, but there should be no repeats of the mentioned events.</li>
-                            <li>Each row corresponds to a group of events that are in the same timeblock. Therefore, no one can do both of the events at the same time.</li>
-                            <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
-                            <li>There is no limit to row length or row number.</li>
-                            <li>There should be no other information in the sheet.</li>
-                        </ul>
-                        <br>
-                        <img class="rounded mx-auto d-block w-100" style="" src="{% static 'images/conflicting_events.png' %}"> 
-                    </li>
-                    <li class="list-group-item"><b>Step 2:</b> Download CSV data.<br>
-                        <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
-                        {% comment %} <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/download_csv.png' %}">  {% endcomment %}
-                    </li>
-                  </ul>
-                  <br>
-                  <ul class="list-group">
-                    <li class="list-group-item active lead">Example Creation of Member Event Preferences CSV Data Using Google Sheets:</li>
-                    <li class="list-group-item">
-                        <p><b>Step 1:</b> Make data. Requirements:</p>
-                        <ul>
-                            <li>All members that want to be on the competition should be present with no repeats.</li>
-                            <li>Members can have different tags according to their status. A member can have "(O)" next to their name to say that they are an officer and get absolute priority when being assigned (automatically placed in the best team possible). If they have "(R)" (mutually exclusive with "(O)"), the member is required to be on one of the many events, though they are not given absolute priority. Any member can also have the "(S)" tag, signaling that they are seniors and the 7-senior rule applies to them.</li>
-                            <li>First line contains the header. (What is in the header does not matter and it can be completely empty, but the first row should not have data.)</li>
-                            <li>All members must be stated in the <i>A</i> column and should be strings. Only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the nenber is the same as in all the other data.</li>
-                            <li>Each member may have a list of preferences that are ranked. There is no specific number of events they must rank, and it can change with each member. Alternatively, each member can have no ranked preferences, meaning the teams are decided solely on skill level. The event names should be stated as strings, and only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other data.</li>
-                            <li>The events do not need to be in any order, and there is no max number of events.</li>
-                            <li>A "(*)" next to an event indicated that the member is required to be put on that event, if possible.</li>
-                            <li>Colors/formatting does not matter.</li>
-                            <li>There should be no other data in the file except that of which is explained above.</li>
-                        </ul>
-                        <br>
-                        <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/member_event_preferences.png' %}"> 
-                    </li>
-                    <li class="list-group-item"><b>Step 2:</b> Download CSV data.<br>
-                        <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
-                        {% comment %} <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/download_csv.png' %}">  {% endcomment %}
-                    </li>
-                  </ul>
-        
-                <br>
-                <ul class="list-group">
-                    <li class="list-group-item active lead">Example Creation of Member Member Event Preferences CSV Data Using Google Sheets:</li>
-                    <li class="list-group-item">
-                        <p><b>Step 1:</b> Make data. Requirements:</p>
-                        <ul>
-                            <li>Not all members that want to be on the competition need to be mentioned and there can be repeats of member names.</li>
-                            <li>There is no header.</li>
-                            <li>All members must be stated in the <i>A</i> and <i>B</i> columns and should be strings. Only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the nenber is the same as in all the other data.</li>
-                            <li>Cells in column <i>C</i> can hold the preferred event that both members in the row want to be in. An empty event cell means that both members don't care about the particular event they would be put into. The event names should be stated as strings, and only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other data.</li>
-                            <li>Colors/formatting does not matter.</li>
-                            <li>There should be no other data in the file except that of which is explained above.</li>
-                        </ul>
-                        <br>
-                        <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/member_member_event_preferences.png' %}"> 
-                    </li>
-                    <li class="list-group-item"><b>Step 2:</b> Download CSV data.<br>
-                        <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
-                        {% comment %} <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/download_csv.png' %}">  {% endcomment %}
-                    </li>
-                  </ul>
-        
+                <div class="accordion" id="accordionExample">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            Example Creation of Available Events CSV Data Using Google Sheets:
+                        </button>
+                      </h2>
+                      <div id="collapseOne" class="accordion-collapse collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <p><b>What is it?</b></p>
+                            <p>This file describes all the available events to compete in at a competition and groups similar events.</p>
+
+                            <p><b>Step 1:</b> Make data. Requirements:</p>
+                            <ul>
+                                <li>There is no header.</li>
+                                <li>All available events must be mentioned once, and there must not be any repeats.</li>
+                                <li>Each row corresponds to a group of events that are similar.</li>
+                                <li>All events mentioned should have the same name as the event names you used for your past invitational data.</li>
+                                <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
+                                <li>There is no limit to row length or row number.</li>
+                                <li>Any event with three members (default is two) should be indicated as such with a "(3)" next to the name.</li>
+                                <li>Any build event should be indicated as such with a "(B)" next to the name.</li>
+                                <li>There should be no other information in the sheet.</li>
+                            </ul>
+                            <br>
+                            <img class="rounded mx-auto d-block w-100" style="" src="{% static 'images/available_events.png' %}"> 
+                            <br>
+                            <b>Step 2:</b> Download CSV data.<br>
+                            <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            Example Creation of Conflicting Events CSV Data Using Google Sheets (OPTIONAL):
+
+                        </button>
+                      </h2>
+                      <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <p><b>What is it?</b></p>
+                            <p>This file describes any events that might conflict at a competition (so no member can do two conflicting events at the same time).</p>
+
+                            <p><b>Step 1:</b> Make data. Requirements:</p>
+                            <ul>
+                                <li>There is no header.</li>
+                                <li>Not all events need to be mentioned, but there should be no repeats of the mentioned events.</li>
+                                <li>Each row corresponds to a group of events that are in the same timeblock. Therefore, no one can do both of the events at the same time.</li>
+                                <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
+                                <li>There is no limit to row length or row number.</li>
+                                <li>There should be no other information in the sheet.</li>
+                            </ul>
+                            <br>
+                            <img class="rounded mx-auto d-block w-100" style="" src="{% static 'images/conflicting_events.png' %}"> 
+                            
+                            <br>
+                            
+                            <b>Step 2:</b> Download CSV data.<br>
+                            <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingThree">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                            Example Creation of Member Event Preferences CSV Data Using Google Sheets
+                        </button>
+                      </h2>
+                      <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <p><b>What is it?</b></p>
+                            <p>This file describes the available members able to compete in the upcoming competition and their top event preferences. If there are no events inputted, then the program just treats the file as an attendance list.</p>
+
+                            <p><b>Step 1:</b> Make data. Requirements:</p>
+                            <ul>
+                                <li>All members that want to be on the competition should be present with no repeats.</li>
+                                <li>If a member is a senior (max 7 seniors allowed on each team), place an "(S)" tag next to their name</li>
+                                <li>There is no header.</li>
+                                <li>All members must be stated in the <i>A</i> column and should be strings. Only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the member is the same as in all past invitational data.</li>
+                                <li>Each member may have a list of preferences that are ranked. There is no specific number of events they must rank, and it can change with each member. Alternatively, each member can have no ranked preferences, meaning the teams are decided solely on skill level. The event names should be stated as strings, and only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other data.</li>
+                                <li>The events do not need to be in any order, and there is no max number of events.</li>
+                                <li>Colors/formatting does not matter.</li>
+                                <li>There should be no other data in the file except that of which is explained above.</li>
+                            </ul>
+                            <br>
+                            <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/member_event_preferences.png' %}"> 
+                            
+                            <br>
+                            
+                            <b>Step 2:</b> Download CSV data.<br>
+                            <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                            Example Creation of Member Member Event Preferences CSV Data Using Google Sheets (OPTIONAL):
+                          </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
+                          <div class="accordion-body">
+                            <p><b>What is it?</b></p>
+                            <p>This file describes any preferences where two members want to be on the same event together.</p>
+
+                            <p><b>Step 1:</b> Make data. Requirements:</p>
+                            <ul>
+                                <li>Not all members that want to be on the competition need to be mentioned and there can be repeats of member names.</li>
+                                <li>There is no header.</li>
+                                <li>All members must be stated in the <i>A</i> and <i>B</i> columns and should be strings. Only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the nenber is the same as in all the other data.</li>
+                                <li>Cells in column <i>C</i> can hold the preferred event that both members in the row want to be in. An empty event cell means that both members don't care about the particular event they would be put into. The event names should be stated as strings, and only letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other data.</li>
+                                <li>Colors/formatting does not matter.</li>
+                                <li>There should be no other data in the file except that of which is explained above.</li>
+                            </ul>
+                            <br>
+                            <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/member_member_event_preferences.png' %}"> 
+                            <br>
+                            
+                            <b>Step 2:</b> Download CSV data.<br>
+                            <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+
+                        </div>
+                        </div>
+                      </div>
+                  </div>
+
+                        
                 <br>
 
 

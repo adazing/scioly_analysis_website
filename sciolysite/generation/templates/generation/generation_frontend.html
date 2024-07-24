@@ -734,10 +734,23 @@
 
     function calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score) {
         var total_skill_score = 0;
+        var total_preference_score = 0;
         {% comment %} console.log(team);
         console.log(min_score);
         console.log(members_to_skill_level); {% endcomment %}
         {% comment %} console.log(required_member_event_pairs); {% endcomment %}
+        // preferences
+        for (var [m, li] of Object.entries(members_to_ranked_preferences)){ // TODO: might not have to iterate through all the members
+            
+            for(var idx=0; idx<members_to_ranked_preferences.length; idx++){
+                if (team[members_to_ranked_preferences[idx]].includes(m)){
+                    total_preference_score += (idx+1)/worst_preference_amount;
+                }
+            }
+        }
+
+
+        // skills
         for (var e in team) {
             for (var m of team[e]) {
                 if (members_to_skill_level[m][e] !== undefined) {
@@ -745,9 +758,6 @@
                 } else {
                     total_skill_score += min_score;
                     {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
-                }
-                for(e of members_to_ranked_preferences){
-                    
                 }
                 let is_required = required_member_event_pairs.some(arr => 
                     arr.length === [m, e].length && 
@@ -761,7 +771,7 @@
                 {% comment %} console.log(`Current total_skill_score: ${total_skill_score}`); {% endcomment %}
             }
         }
-        return total_skill_score;
+        return total_skill_score * (1-skill_vs_preferences) + total_preference_score * skill_vs_preferences;
     }
 
 
@@ -1221,6 +1231,10 @@ function make_team4(available_events, members_to_ranked_preferences, member_memb
     }
     console.log(team_members);
     return team;
+}
+
+function make_teams(available_events, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score){
+
 }
 
 {% comment %} console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang", "Eli Tabak"], min_score)); {% endcomment %}

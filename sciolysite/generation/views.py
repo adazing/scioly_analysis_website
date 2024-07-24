@@ -64,29 +64,24 @@ def conflicting_events_reader(conflicting_events, generated_competition_settings
 
 def member_event_preferences_reader(member_event_preferences_data, generated_competition_settings):
     reader = csv.reader(member_event_preferences_data.splitlines(), delimiter=',')
-    next(reader)
+    # next(reader)
     for row in reader:
         print(row)
         member_name=row[0]
         is_senior = "(S)" in member_name
-        member_status="N"
-        if "(O)" in member_name:
-            member_status="O"
-        elif "(R)" in member_name:
-            member_status="R"
         member_name=remove_punctuation(member_name, False)
-        member = AvailableMember.objects.create(generated_competition_settings=generated_competition_settings, name=member_name, status=member_status, is_senior=is_senior)
+        member = AvailableMember.objects.create(generated_competition_settings=generated_competition_settings, name=member_name, is_senior=is_senior)
         if len(row)!=1:
             event_name=remove_punctuation(row[1], True)
             for e in range(1,len(row)):
                 if row[e].strip()!="":
                     event_name = row[e]
-                    is_required = "(*)" in event_name
+                    # is_required = "(*)" in event_name
                     event_name = remove_punctuation(event_name, True)
                     print(event_name)
                     #print(AvailableEvent.objects.all)
                     event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings)
-                    wanted_member_event_pair = WantedMemberEventPair.objects.create(rank=e, event=event, member=member, required=is_required)
+                    WantedMemberEventPair.objects.create(rank=e, event=event, member=member)
                 else: # reached end of row
                     break
 
@@ -112,9 +107,9 @@ def member_member_event_preferences_reader(member_member_event_preferences_data,
                 # print(event_name=="")
                 event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings) if event_name!="" else None
                 if event==None:
-                    wanted_member_member_event_pair = WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2)
+                    WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2)
                 else:
-                    wanted_member_member_event_pair = WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2, event=event)
+                    WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2, event=event)
                 # print(wanted_member_member_event_pair)
             except:
                 continue
@@ -971,11 +966,24 @@ def frontend_generate(request, pk):
         min_total_score = min([sum(members_to_skill_level[m].values()) for m in members_to_skill_level])
         members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_total_score) for m in available_members}
         
-        min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
+        for m in members_to_experience:
+            new_member_to_skill_level = dict()
+            for e in members_to_experience[m]:
+                if members_to_experience[m][e] != 1: # only did event once in the past, invalid
+                    new_member_to_skill_level[e] = members_to_skill_level[m][e]
+            # if not new_member_to_skill_level:
+            #     del members_to_skill_level
+            members_to_skill_level[m] = new_member_to_skill_level
+        
+        # print(members_to_skill_level)
+        # print(members_to_skill_level["Ada Langford"].values())
+        # print([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
+        min_score = min([min(members_to_skill_level[m].values(), default = float('inf')) for m in members_to_skill_level])
+        max_score = max([max(members_to_skill_level[m].values(), default = float('-inf')) for m in members_to_skill_level])
         # max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
         
         # first_time_scores = {e: sum(first_time_scores[e])/len(first_time_scores[e]) if len(first_time_scores[e]) != 0 else 0.0 for e in first_time_scores}
-        
+        print("min_score", min_score)
         # for m in members_to_experience:
         #     for e in members_to_experience[m]:
         #         if members_to_experience[m][e] == 1:
@@ -990,11 +998,10 @@ def frontend_generate(request, pk):
             # member_to_events_skills = members_to_skill_level[m].copy()
             # while len(members_to_skill_level[m])>0:
             for e in available_events:
-                if e in members_to_skill_level[m]:
-                    if members_to_experience[m][e] == 1:
-                        members_to_skill_level[m][e] = min_score
+                if e not in members_to_skill_level[m]:
+                    members_to_skill_level[m][e] = 0
                 else:
-                    members_to_skill_level[m][e] = min_score
+                    members_to_skill_level[m][e] = (members_to_skill_level[m][e] - min_score) / (max_score - min_score)
             members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
         
         # for m in members_to_skill_level:
