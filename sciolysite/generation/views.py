@@ -218,11 +218,10 @@ def generatedCompetitionSettingsView(request, pk):
     # generated_competition_settings = GeneratedCompetitionSettings.objects.get(id=pk)
     if generated_competition_settings.user.id == request.user.id:
         team_list = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=True)
-        final_team_event_pairs = FinalTeamEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)
+        # final_team_event_pairs = FinalTeamEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)
         context={
             "generated_competition_settings":generated_competition_settings,
             "team_list":team_list,
-            "final_team_has_been_generated":len(final_team_event_pairs)>0,
         }
         return render(request, "generation/generated_competition_settings_view.html", context)
     raise Http404
@@ -231,16 +230,25 @@ def generatedCompetitionSettingsView(request, pk):
 def generatedTeamCreateView(request, pk):
     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
     if generated_competition_settings.user.id == request.user.id:
-        form=TeamForm(request.POST or None, queryset=AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="R"))
+        members_list = AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings)
+        print(members_list)
+        # events_list = AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)
+        # requirements_list = AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, required_team = generated_team)
+        form=TeamForm(request.POST or None)
         if request.method=="POST":
             if form.is_valid():
                 generated_team = GeneratedTeam.objects.create(name=form.cleaned_data.get("name"), notes=form.cleaned_data.get("notes"), generated_competition_settings=generated_competition_settings, team_size=form.cleaned_data.get("team_size"))
                 print(form.cleaned_data.get("required_members"))
                 for m in form.cleaned_data.get("required_members"):
-                    RequiredMemberToTeam.objects.create(member=m, team = generated_team)
+                    m.required_team = generated_team
+                    m.save()
+                    # RequiredMemberToTeam.objects.create(member=m, team = generated_team)
                 return redirect('generatedCompetitionSettingsView', pk=generated_competition_settings.id)
         context={
             "form": form,
+            # "members_list" : members_list,
+            # "events_list" : events_list,
+            # "requirements_list": requirements_list,
         }
         return render(request, "generation/team_edit.html", context)
     raise Http404
@@ -250,9 +258,16 @@ def generatedTeamEditView(request, pk):
     generated_team = get_object_or_404(GeneratedTeam, id=pk)
     
     if generated_team.generated_competition_settings.user.id == request.user.id:
-        list_of_required_members_to_teams = RequiredMemberToTeam.objects.filter(team=generated_team)
-        preselected_members = [m for m in AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, status="R") if list_of_required_members_to_teams]
-        form = TeamForm(request.POST or None, instance=generated_team, initial={'required_members':preselected_members}, queryset=AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, status="R"))
+        # list_of_required_members_to_teams = RequiredMemberToTeam.objects.filter(team=generated_team)
+        # list_of_required_members_to_teams = AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, required_team = generated_team)
+        # preselected_members = [m for m in AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings) if list_of_required_members_to_teams]
+        # form = TeamForm(request.POST or None, instance=generated_team, initial={'required_members':preselected_members}, queryset=list_of_required_members_to_teams)
+        # form = TeamForm(request.POST or None, instance=generated_team, queryset=list_of_required_members_to_teams)
+        # members_list = AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings)
+        # events_list = AvailableEvent.objects.filter(generated_competition_settings=generated_team.generated_competition_settings)
+        # requirements_list = AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, required_team = generated_team)
+        # print(members_list)
+        form = TeamForm(request.POST or None, instance=generated_team)
         print(form.errors)
         if request.method=="POST":
             if form.is_valid():
@@ -260,15 +275,39 @@ def generatedTeamEditView(request, pk):
                 generated_team.notes=form.cleaned_data.get("notes")
                 generated_team.team_size=form.cleaned_data.get("team_size")
                 generated_team.save()
-                list_of_required_members_to_teams.delete()
-                for m in form.cleaned_data.get("required_members"):
-                    RequiredMemberToTeam.objects.create(member=m, team = generated_team)
+                # list_of_required_members_to_teams.delete()
+                # for m in form.cleaned_data.get("required_members"):
+                #     RequiredMemberToTeam.objects.create(member=m, team = generated_team)
                 return redirect('generatedCompetitionSettingsView', pk=generated_team.generated_competition_settings.id)
         context={
+            # "members_list": members_list,
+            # "events_list" : events_list,
             "form":form,
+            # "requirements_list": requirements_list,
         }
         return render(request, "generation/team_edit.html", context)
     raise Http404
+
+def editRequirementsView(request, pk):
+    generated_team = get_object_or_404(GeneratedTeam, id=pk)
+    
+    if generated_team.generated_competition_settings.user.id == request.user.id:
+        form = RequirementsForm(request.POST or None)
+        if request.method=="POST":
+            if form.is_valid():
+                member = form.cleaned_data.get("member")
+                event = form.cleaned_data.get("event")
+                requirements = RequiredMemberToTeam.objects.filter(team=generated_team)
+                required_members = []
+                events_to_members = {}
+                for r in requirements:
+                    if r.member not in required_members:
+                        required_members.append(r.member)
+                    if r.event not in events_to_members:
+                        events_to_members[event] = [r.member]
+                    elif r.event in events_to_members:
+                        
+    
 
 @login_required
 def generatedCompetitionsListView(request):
@@ -602,261 +641,261 @@ def generate_ranked_members(ranked_members, teams, officers, required_members, r
     
 
           
-@login_required
-def generateTeams(request, pk):
-    generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
-    # teams that are in generated_competition_settings
-    teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=True)
-    available_members = AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)
-    available_events = AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)
-    events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
-    build_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, is_build_event=True)]
-    results = []
-    error = ""
-    # check not too many seniors
-    # too many required seniors
-    print(RequiredMemberToTeam.objects.all())
-    for t in teams:
-        print([r.member.name+" "+t.name for r in RequiredMemberToTeam.objects.filter(team=t)])
-    # print([r.member.name+t.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)])
-    if generated_competition_settings.user.id != request.user.id:
-        raise Http404
-    if len(teams)==0:
-        error="You need to add at least one team to generate!"
-    elif sum([t.team_size for t in teams])>len(available_members): # too many members on team, not possible!
-        error="The team sizes you specified are too large with the given members. Make the team size values lower to proceed."
-    # not enough event slots
-    elif any([t.generated_competition_settings.min_events_per_member*t.team_size>len(available_events)*2+len(events_with_3_members) for t in teams]):
-        error="There are not enough event slots given your high team size and high min events per member constraints. Please change before proceeding."
-    elif any([len(RequiredMemberToTeam.objects.filter(team=t))>t.team_size for t in teams]):
-        error="There are more required members to the team than is possible with your team_size constraint. Please change before proceeding."
-    #make sure none of the RequiredMemberToTeam objects overlap across different teams - done
-    # loading bar
-    # download teams csv file after generation
-    #make sure none of the RequiredMemberToTeam objects overlap across different teams
-    elif len(set([r.member.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)]))!=len([r.member.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)]):
-        error = "There are overlaps between required members on teams! Please change before proceeding."
-    else: # no errors!
-        #find preferences
-        member_event_pairs = WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)
-        worst_preference_amount = max([m_e.rank for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
-        member_member_event_pairs = WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)
-        members_to_ranked_preferences = dict()
-        officers = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="O")]
-        required_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="R", )]
-        required_members_on_specific_teams = [(r.member.name, r.team) for t in teams for r in RequiredMemberToTeam.objects.filter(team__generated_competition_settings = generated_competition_settings)]
-        seniors = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, is_senior=True)]
+# @login_required
+# def generateTeams(request, pk):
+#     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
+#     # teams that are in generated_competition_settings
+#     teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=True)
+#     available_members = AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)
+#     available_events = AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)
+#     events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
+#     build_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, is_build_event=True)]
+#     results = []
+#     error = ""
+#     # check not too many seniors
+#     # too many required seniors
+#     print(RequiredMemberToTeam.objects.all())
+#     for t in teams:
+#         print([r.member.name+" "+t.name for r in RequiredMemberToTeam.objects.filter(team=t)])
+#     # print([r.member.name+t.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)])
+#     if generated_competition_settings.user.id != request.user.id:
+#         raise Http404
+#     if len(teams)==0:
+#         error="You need to add at least one team to generate!"
+#     elif sum([t.team_size for t in teams])>len(available_members): # too many members on team, not possible!
+#         error="The team sizes you specified are too large with the given members. Make the team size values lower to proceed."
+#     # not enough event slots
+#     elif any([t.generated_competition_settings.min_events_per_member*t.team_size>len(available_events)*2+len(events_with_3_members) for t in teams]):
+#         error="There are not enough event slots given your high team size and high min events per member constraints. Please change before proceeding."
+#     elif any([len(RequiredMemberToTeam.objects.filter(team=t))>t.team_size for t in teams]):
+#         error="There are more required members to the team than is possible with your team_size constraint. Please change before proceeding."
+#     #make sure none of the RequiredMemberToTeam objects overlap across different teams - done
+#     # loading bar
+#     # download teams csv file after generation
+#     #make sure none of the RequiredMemberToTeam objects overlap across different teams
+#     elif len(set([r.member.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)]))!=len([r.member.name for t in teams for r in RequiredMemberToTeam.objects.filter(team=t)]):
+#         error = "There are overlaps between required members on teams! Please change before proceeding."
+#     else: # no errors!
+#         #find preferences
+#         member_event_pairs = WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)
+#         worst_preference_amount = max([m_e.rank for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
+#         member_member_event_pairs = WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)
+#         members_to_ranked_preferences = dict()
+#         officers = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="O")]
+#         required_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="R", )]
+#         required_members_on_specific_teams = [(r.member.name, r.team) for t in teams for r in RequiredMemberToTeam.objects.filter(team__generated_competition_settings = generated_competition_settings)]
+#         seniors = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, is_senior=True)]
         
-        for me in member_event_pairs:
-            if me.member.name in members_to_ranked_preferences:
-                members_to_ranked_preferences[me.member.name].append(me.event.name)
-            else:
-                members_to_ranked_preferences[me.member.name]=[me.event.name]
-        # members with no ranked preferences
-        for m in available_members:
-            if m.name not in members_to_ranked_preferences:
-                members_to_ranked_preferences[m.name]=[]
-        print(members_to_ranked_preferences)
+#         for me in member_event_pairs:
+#             if me.member.name in members_to_ranked_preferences:
+#                 members_to_ranked_preferences[me.member.name].append(me.event.name)
+#             else:
+#                 members_to_ranked_preferences[me.member.name]=[me.event.name]
+#         # members with no ranked preferences
+#         for m in available_members:
+#             if m.name not in members_to_ranked_preferences:
+#                 members_to_ranked_preferences[m.name]=[]
+#         print(members_to_ranked_preferences)
         
-        #review previous competition data
-        available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings)]
-        available_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)]
-        members_to_experience=dict()
-        members_to_skill_level=dict()
-        member_list=data.models.Member.objects.filter(event_member_instance__team__competition__user=request.user)
-        # min_score=float("inf")
-        # max_score=float("-inf")
-        for member in member_list: # for all the members
-            # print(members_to_skill_level)
-            # print(member)
-            # print(member.event_member_instance.event_name)
-            #they did not quit/get disqualified
-            if member.event_member_instance.score<=member.event_member_instance.team.competition.number_of_teams_competed:
-                # calculate score for event_member_instance
-                school_scores_of_competition=[]
-                for team in data.models.Team.objects.filter(competition=member.event_member_instance.team.competition): # for all the teams in the member's competition
-                    school_scores_of_competition+=[x.score for x in data.models.EventMemberInstance.objects.filter(team=team) if x.score<=x.team.competition.number_of_teams_competed] # add the teams scores
-                average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
-                score=average_score_of_team/member.event_member_instance.team.competition.number_of_teams_competed-member.event_member_instance.score/member.event_member_instance.team.competition.number_of_teams_competed
-                # if score>max_score:
-                #     max_score=score
-                # if score<min_score:
-                #     min_score=score
-                if member.name in members_to_skill_level:
-                    if member.event_member_instance.event_name in members_to_skill_level[member.name]:
-                        members_to_skill_level[member.name][member.event_member_instance.event_name]+=score
-                        members_to_experience[member.name][member.event_member_instance.event_name]+=1
-                    else:
-                        members_to_skill_level[member.name][member.event_member_instance.event_name]=score
-                        members_to_experience[member.name][member.event_member_instance.event_name]=1
-                else:
-                    members_to_skill_level[member.name]={}
-                    members_to_skill_level[member.name][member.event_member_instance.event_name]=score
-                    members_to_experience[member.name]={}
-                    members_to_experience[member.name][member.event_member_instance.event_name]=1
-        max_sum_of_xp = max([sum(members_to_experience[m].values()) for m in members_to_experience])
-        print(members_to_skill_level)
-        # print(members_to_experience)
-        min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
-        max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
-        members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
-        # scale members_to_skill_level to be between 0 and worst_preference_amount
-        # print(members_to_skill_level)
-        # k = worst_preference_amount/(max_score-min_score)
-        for m in members_to_skill_level:
-            for e in members_to_skill_level[m]:
-                members_to_skill_level[m][e]=(members_to_skill_level[m][e]-min_score)/(max_score-min_score)
-        # print([m for m in available_members if m not in members_to_skill_level])
-        # members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
-        # print("hi")
-        # print(worst_preference_amount)
-        # print(members_to_skill_level)
-        # members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
-        # members_to_total_skill_level = {}
-        # for m in available_members:
-        #     if m in members_to_skill_level:
-        #         # print(members_to_skill_level[m] if m=="Raymond Tong" else "")
-        #         members_to_total_skill_level[m] = sum(members_to_skill_level[m].values())
-        #     else:
-        #         members_to_total_skill_level[m] = min_score*max_sum_of_xp
-        print("hi")
-        print(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1])))
-        ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())
-        print(ranked_members)
-        officers_to_total_skill_level = {o:members_to_total_skill_level[o] for o in members_to_total_skill_level if o in officers}
-        ranked_officers = list(dict(sorted(officers_to_total_skill_level.items(), key=lambda item: item[1], reverse=True)).keys())
-        number_of_members_included_in_competition = sum([t.team_size for t in teams])
-        ranked_members = ranked_officers + [m for m in ranked_members if m not in officers]
-        required_members_to_total_skill_level = {r:members_to_total_skill_level[r] for r in members_to_total_skill_level if r in required_members}
-        required_members_not_yet_on_team = [r for r in list(dict(sorted(required_members_to_total_skill_level.items(), key=lambda item: item[1], reverse=True)).keys()) if r in ranked_members[number_of_members_included_in_competition:]]
-        seniors_to_total_skill_level = {s:members_to_total_skill_level[s] for s in members_to_total_skill_level if s in seniors}
+#         #review previous competition data
+#         available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings)]
+#         available_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)]
+#         members_to_experience=dict()
+#         members_to_skill_level=dict()
+#         member_list=data.models.Member.objects.filter(event_member_instance__team__competition__user=request.user)
+#         # min_score=float("inf")
+#         # max_score=float("-inf")
+#         for member in member_list: # for all the members
+#             # print(members_to_skill_level)
+#             # print(member)
+#             # print(member.event_member_instance.event_name)
+#             #they did not quit/get disqualified
+#             if member.event_member_instance.score<=member.event_member_instance.team.competition.number_of_teams_competed:
+#                 # calculate score for event_member_instance
+#                 school_scores_of_competition=[]
+#                 for team in data.models.Team.objects.filter(competition=member.event_member_instance.team.competition): # for all the teams in the member's competition
+#                     school_scores_of_competition+=[x.score for x in data.models.EventMemberInstance.objects.filter(team=team) if x.score<=x.team.competition.number_of_teams_competed] # add the teams scores
+#                 average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+#                 score=average_score_of_team/member.event_member_instance.team.competition.number_of_teams_competed-member.event_member_instance.score/member.event_member_instance.team.competition.number_of_teams_competed
+#                 # if score>max_score:
+#                 #     max_score=score
+#                 # if score<min_score:
+#                 #     min_score=score
+#                 if member.name in members_to_skill_level:
+#                     if member.event_member_instance.event_name in members_to_skill_level[member.name]:
+#                         members_to_skill_level[member.name][member.event_member_instance.event_name]+=score
+#                         members_to_experience[member.name][member.event_member_instance.event_name]+=1
+#                     else:
+#                         members_to_skill_level[member.name][member.event_member_instance.event_name]=score
+#                         members_to_experience[member.name][member.event_member_instance.event_name]=1
+#                 else:
+#                     members_to_skill_level[member.name]={}
+#                     members_to_skill_level[member.name][member.event_member_instance.event_name]=score
+#                     members_to_experience[member.name]={}
+#                     members_to_experience[member.name][member.event_member_instance.event_name]=1
+#         max_sum_of_xp = max([sum(members_to_experience[m].values()) for m in members_to_experience])
+#         print(members_to_skill_level)
+#         # print(members_to_experience)
+#         min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
+#         max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
+#         members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
+#         # scale members_to_skill_level to be between 0 and worst_preference_amount
+#         # print(members_to_skill_level)
+#         # k = worst_preference_amount/(max_score-min_score)
+#         for m in members_to_skill_level:
+#             for e in members_to_skill_level[m]:
+#                 members_to_skill_level[m][e]=(members_to_skill_level[m][e]-min_score)/(max_score-min_score)
+#         # print([m for m in available_members if m not in members_to_skill_level])
+#         # members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
+#         # print("hi")
+#         # print(worst_preference_amount)
+#         # print(members_to_skill_level)
+#         # members_to_total_skill_level = {m:(sum(members_to_skill_level[m].values()) if m in members_to_skill_level else min_score*max_sum_of_xp) for m in available_members}
+#         # members_to_total_skill_level = {}
+#         # for m in available_members:
+#         #     if m in members_to_skill_level:
+#         #         # print(members_to_skill_level[m] if m=="Raymond Tong" else "")
+#         #         members_to_total_skill_level[m] = sum(members_to_skill_level[m].values())
+#         #     else:
+#         #         members_to_total_skill_level[m] = min_score*max_sum_of_xp
+#         print("hi")
+#         print(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1])))
+#         ranked_members = list(dict(sorted(members_to_total_skill_level.items(), key=lambda item:item[1], reverse=True)).keys())
+#         print(ranked_members)
+#         officers_to_total_skill_level = {o:members_to_total_skill_level[o] for o in members_to_total_skill_level if o in officers}
+#         ranked_officers = list(dict(sorted(officers_to_total_skill_level.items(), key=lambda item: item[1], reverse=True)).keys())
+#         number_of_members_included_in_competition = sum([t.team_size for t in teams])
+#         ranked_members = ranked_officers + [m for m in ranked_members if m not in officers]
+#         required_members_to_total_skill_level = {r:members_to_total_skill_level[r] for r in members_to_total_skill_level if r in required_members}
+#         required_members_not_yet_on_team = [r for r in list(dict(sorted(required_members_to_total_skill_level.items(), key=lambda item: item[1], reverse=True)).keys()) if r in ranked_members[number_of_members_included_in_competition:]]
+#         seniors_to_total_skill_level = {s:members_to_total_skill_level[s] for s in members_to_total_skill_level if s in seniors}
         
-        # #from the end to start, add required members not yet on team by replacing non-necessary members
-        # if required_members_not_yet_on_team!=[]:
-        #     for i, m in reversed(list(enumerate(ranked_members))):
-        #         if m not in required_members and m not in officers:
-        #             ranked_members[i] = required_members_not_yet_on_team.pop()
-        #             if required_members_not_yet_on_team==[]:
-        #                 break
+#         # #from the end to start, add required members not yet on team by replacing non-necessary members
+#         # if required_members_not_yet_on_team!=[]:
+#         #     for i, m in reversed(list(enumerate(ranked_members))):
+#         #         if m not in required_members and m not in officers:
+#         #             ranked_members[i] = required_members_not_yet_on_team.pop()
+#         #             if required_members_not_yet_on_team==[]:
+#         #                 break
 
-        # print(worst_preference_amount)
-        # print(members_to_skill_level)
-        # print(max_score)
-        # print(min_score)
-        # for t in range(len(teams)):
-        #     start_idx = sum([teams[t].team_size for t in range(0, t-1)]) if t!=0 else 0
-        #     end_idx = sum([teams[t].team_size for t in range(0, t)])
-        #     seniors_on_team = [m for m in ranked_members[start_idx:end_idx] if m in seniors and m in officers]+[m for m in ranked_members[start_idx:end_idx] if m in seniors and m in required_members]+[m for m in ranked_members[start_idx:end_idx] if m in seniors and m not in officers and m not in seniors]
+#         # print(worst_preference_amount)
+#         # print(members_to_skill_level)
+#         # print(max_score)
+#         # print(min_score)
+#         # for t in range(len(teams)):
+#         #     start_idx = sum([teams[t].team_size for t in range(0, t-1)]) if t!=0 else 0
+#         #     end_idx = sum([teams[t].team_size for t in range(0, t)])
+#         #     seniors_on_team = [m for m in ranked_members[start_idx:end_idx] if m in seniors and m in officers]+[m for m in ranked_members[start_idx:end_idx] if m in seniors and m in required_members]+[m for m in ranked_members[start_idx:end_idx] if m in seniors and m not in officers and m not in seniors]
             
-        #     if len(seniors_on_team)>7:
-        #         members_that_can_be_moved = [i for i in range(ranked_members) if ranked_members[i] not in seniors and ranked_members[i] not in officers]
-        #         for s in range(len(seniors_on_team)-7):
-        #             available_members_that_can_be_moved = [m for m in members_that_can_be_moved if m>=end_idx]
-        #             if available_members_that_can_be_moved!=[]:
-        #                 senior_idx = ranked_members.index(seniors_on_team[7+s])
-        #                 #choose closest switch_idx possible
-        #                 chosen_switch_idx = sorted(available_members_that_can_be_moved, key=lambda item: item-senior_idx)[0]
-        #                 #switch
-        #                 ranked_members[senior_idx], ranked_members[chosen_switch_idx] = ranked_members[chosen_switch_idx], ranked_members[senior_idx]
-        #                 #delete chosen_switch_idx from available_members_that_can_be_moved
-        #                 del available_members_that_can_be_moved[available_members_that_can_be_moved.index(chosen_switch_idx)]
+#         #     if len(seniors_on_team)>7:
+#         #         members_that_can_be_moved = [i for i in range(ranked_members) if ranked_members[i] not in seniors and ranked_members[i] not in officers]
+#         #         for s in range(len(seniors_on_team)-7):
+#         #             available_members_that_can_be_moved = [m for m in members_that_can_be_moved if m>=end_idx]
+#         #             if available_members_that_can_be_moved!=[]:
+#         #                 senior_idx = ranked_members.index(seniors_on_team[7+s])
+#         #                 #choose closest switch_idx possible
+#         #                 chosen_switch_idx = sorted(available_members_that_can_be_moved, key=lambda item: item-senior_idx)[0]
+#         #                 #switch
+#         #                 ranked_members[senior_idx], ranked_members[chosen_switch_idx] = ranked_members[chosen_switch_idx], ranked_members[senior_idx]
+#         #                 #delete chosen_switch_idx from available_members_that_can_be_moved
+#         #                 del available_members_that_can_be_moved[available_members_that_can_be_moved.index(chosen_switch_idx)]
         
-        # GENERATE TEAM MEMBERS
+#         # GENERATE TEAM MEMBERS
 
-        ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
+#         ranked_members = generate_ranked_members(ranked_members, teams, officers, required_members, required_members_on_specific_teams, seniors)
         
-        teams_list = []
-        print(ranked_members)
-        print(teams)
-        team_members_list = []
-        for t in range(len(teams)):
-            start_idx = sum([teams[i].team_size for i in range(0, t)]) if t!=0 else 0
-            end_idx = sum([teams[t].team_size for t in range(0, t+1)])
-            team_members = ranked_members[start_idx:end_idx]
-            print(team_members)
-            team = make_team(available_events, team_members, members_to_ranked_preferences, member_member_event_pairs, teams[t], generated_competition_settings, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events)
-            teams_list.append(team)
-            team_members_list.append(team_members)
-        # teams_list_new = improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience)
-        teams_list = fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events)
-        print(teams_list)
-        # print(teams_list)
-        #need to include new members in ranked_members too
-        # results = []
-        # print(teams_list)
-        # # format results for template rendering
-        # for t in range(len(teams_list)):
-        #     result = []
-        #     result.append([[e]+[m+" (*)" if e not in members_to_ranked_preferences[m] else m for m in teams_list[t][e]] for e in teams_list[t]])
-        #     result.append([[m]+[e if e in members_to_ranked_preferences[m] else e+" (*)" for e in [e for e in teams_list[t] if m in teams_list[t][e]]] for m in team_members_list[t]])
-        #     print(result)
-        #     results.append(result)
+#         teams_list = []
+#         print(ranked_members)
+#         print(teams)
+#         team_members_list = []
+#         for t in range(len(teams)):
+#             start_idx = sum([teams[i].team_size for i in range(0, t)]) if t!=0 else 0
+#             end_idx = sum([teams[t].team_size for t in range(0, t+1)])
+#             team_members = ranked_members[start_idx:end_idx]
+#             print(team_members)
+#             team = make_team(available_events, team_members, members_to_ranked_preferences, member_member_event_pairs, teams[t], generated_competition_settings, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events)
+#             teams_list.append(team)
+#             team_members_list.append(team_members)
+#         # teams_list_new = improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience)
+#         teams_list = fix_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, generated_competition_settings, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events)
+#         print(teams_list)
+#         # print(teams_list)
+#         #need to include new members in ranked_members too
+#         # results = []
+#         # print(teams_list)
+#         # # format results for template rendering
+#         # for t in range(len(teams_list)):
+#         #     result = []
+#         #     result.append([[e]+[m+" (*)" if e not in members_to_ranked_preferences[m] else m for m in teams_list[t][e]] for e in teams_list[t]])
+#         #     result.append([[m]+[e if e in members_to_ranked_preferences[m] else e+" (*)" for e in [e for e in teams_list[t] if m in teams_list[t][e]]] for m in team_members_list[t]])
+#         #     print(result)
+#         #     results.append(result)
         
-        # save final team
-        # delete existing final team
-        FinalTeamEventPair.objects.filter(member__generated_competition_settings = generated_competition_settings).delete()
+#         # save final team
+#         # delete existing final team
+#         FinalTeamEventPair.objects.filter(member__generated_competition_settings = generated_competition_settings).delete()
                 
-        #delete unused teams
-        GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=False, was_part_of_previous_generation=True).delete()
-        # iterate over teams
-        # generated_teams = GeneratedTeam.objects.filter(generated_competition_settings = generated_competition_settings)
-        for t in range(len(teams_list)):
-            team = teams[t]
-            team.was_part_of_previous_generation=True
-            team.save()
-            for e in teams_list[t]:
-                event = AvailableEvent.objects.get(generated_competition_settings=generated_competition_settings, name=e)
-                for m in teams_list[t][e]:
-                    member = AvailableMember.objects.get(generated_competition_settings=generated_competition_settings, name=m)
-                    member.final_team = team
-                    member.save()
-                    FinalTeamEventPair.objects.create(member = member, event=event, is_wanted= e in members_to_ranked_preferences[m])
-    return redirect('finalGeneratedCompetitionView', pk=generated_competition_settings.id)
-    # context = {
-    #     "error":error,
-    #     "results":results,
-    # }
-    # return render(request, "generation/generation.html", context)
+#         #delete unused teams
+#         GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, is_displayed=False, was_part_of_previous_generation=True).delete()
+#         # iterate over teams
+#         # generated_teams = GeneratedTeam.objects.filter(generated_competition_settings = generated_competition_settings)
+#         for t in range(len(teams_list)):
+#             team = teams[t]
+#             team.was_part_of_previous_generation=True
+#             team.save()
+#             for e in teams_list[t]:
+#                 event = AvailableEvent.objects.get(generated_competition_settings=generated_competition_settings, name=e)
+#                 for m in teams_list[t][e]:
+#                     member = AvailableMember.objects.get(generated_competition_settings=generated_competition_settings, name=m)
+#                     member.final_team = team
+#                     member.save()
+#                     FinalTeamEventPair.objects.create(member = member, event=event, is_wanted= e in members_to_ranked_preferences[m])
+#     return redirect('finalGeneratedCompetitionView', pk=generated_competition_settings.id)
+#     # context = {
+#     #     "error":error,
+#     #     "results":results,
+#     # }
+#     # return render(request, "generation/generation.html", context)
 
-def finalGeneratedCompetitionView(request, pk):
-    generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
-    if request.user.id == generated_competition_settings.user.id:
-        teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, was_part_of_previous_generation=True)
-        print(teams)
-        results = []
-        # if FinalTeamEventPair.objects.filter(FinalTeamEventPair.objects.filter(member__final_team = t))
-        for t in teams:
-            final_team_event_pairs = FinalTeamEventPair.objects.filter(member__final_team = t)
-            if len(final_team_event_pairs)>0:
-                results1 = {}
-                results2 = {}
-                for f in final_team_event_pairs:
-                    member_name = f.member.name
-                    event_name = f.event.name
-                    extra = "" if f.is_wanted else "(*)"
-                    # results1
-                    if member_name in results1:
-                        results1[member_name].append(event_name+extra)
-                    else:
-                        results1[member_name]=[event_name+extra]
+# def finalGeneratedCompetitionView(request, pk):
+#     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
+#     if request.user.id == generated_competition_settings.user.id:
+#         teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings, was_part_of_previous_generation=True)
+#         print(teams)
+#         results = []
+#         # if FinalTeamEventPair.objects.filter(FinalTeamEventPair.objects.filter(member__final_team = t))
+#         for t in teams:
+#             final_team_event_pairs = FinalTeamEventPair.objects.filter(member__final_team = t)
+#             if len(final_team_event_pairs)>0:
+#                 results1 = {}
+#                 results2 = {}
+#                 for f in final_team_event_pairs:
+#                     member_name = f.member.name
+#                     event_name = f.event.name
+#                     extra = "" if f.is_wanted else "(*)"
+#                     # results1
+#                     if member_name in results1:
+#                         results1[member_name].append(event_name+extra)
+#                     else:
+#                         results1[member_name]=[event_name+extra]
                     
-                    #results2
-                    if event_name in results2:
-                        results2[event_name].append(member_name+extra)
-                    else:
-                        results2[event_name] = [member_name+extra]
-                results1 = dict(sorted(results1.items()))
-                results2 = dict(sorted(results2.items()))
-                print(results1)
-                # results1.sort()
-                # results2.sort()
-                results.append([[[e]+results2[e]+[""]*(3-len(results2[e])) for e in results2],[[m]+results1[m] for m in results1]])
-        print(results)
-        context = {
-            "results" : results,
-        }
-        return render(request, "generation/generation.html", context)
-    raise Http404
+#                     #results2
+#                     if event_name in results2:
+#                         results2[event_name].append(member_name+extra)
+#                     else:
+#                         results2[event_name] = [member_name+extra]
+#                 results1 = dict(sorted(results1.items()))
+#                 results2 = dict(sorted(results2.items()))
+#                 print(results1)
+#                 # results1.sort()
+#                 # results2.sort()
+#                 results.append([[[e]+results2[e]+[""]*(3-len(results2[e])) for e in results2],[[m]+results1[m] for m in results1]])
+#         print(results)
+#         context = {
+#             "results" : results,
+#         }
+#         return render(request, "generation/generation.html", context)
+#     raise Http404
 
 def frontend_generate(request, pk):
     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)

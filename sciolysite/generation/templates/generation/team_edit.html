@@ -3,10 +3,18 @@
 
     {% block bodycontent %}
         <div class="formblock">
-            <form method="POST">
+            <form method="POST" id="general_team_settings">
                 {% csrf_token %}
                 {{ form|crispy}}
-                <input type="submit" value="Save" class="btn btn-primary">
             </form>
+            <br>
+            <input type="submit" value="Save" class="btn btn-primary" form="general_team_settings">
         </div>
+    {% endblock %}
+
+    {% block scriptcontent %}
+{% comment %}         
+        window.addEventListener("load", (event) => {
+            
+        }); {% endcomment %}
     {% endblock %}

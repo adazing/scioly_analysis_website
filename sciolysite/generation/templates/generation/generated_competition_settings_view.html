@@ -10,10 +10,7 @@
                 <a class="btn btn-primary btn-lg" href="{% url 'generatedCompetitionSettingsEdit' pk=generated_competition_settings.id %}" role="button">Edit {{competition.name}}</a>
                 <a class="btn btn-danger btn-lg" href="{% url 'generatedCompetitionsDeleteView' pk=generated_competition_settings.id %}" role="button">Delete {{competition.name}}</a>
                 <br><br>
-                {% if final_team_has_been_generated %}
-                <a class="btn btn-primary btn-lg" href="{% url 'finalGeneratedCompetitionView' pk=generated_competition_settings.id %}" role="button">View Previously Generated Team</a>
-                {% endif %}
-                <a class="btn btn-primary btn-lg" href="{% url 'generateTeams' pk=generated_competition_settings.id %}" role="button">Generate Competition</a>
+                <a class="btn btn-primary btn-lg" href="{% url 'frontedGenerate' pk=generated_competition_settings.id %}" role="button">Generate Competition</a>
             </p>
         </div>
         <div class="card w-75 mx-auto my-4"><a href="{% url 'generatedTeamCreateView' pk=generated_competition_settings.id %}" class="btn btn-primary">Add Team to Generate</a></div>

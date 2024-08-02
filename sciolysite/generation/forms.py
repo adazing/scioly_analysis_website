@@ -3,7 +3,10 @@ from django.forms import ModelForm
 from django import forms
 from .models import *
 import io
+from .models import *
 import csv
+# from django.shortcuts import get_object_or_404, redirect
+
 
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
@@ -217,12 +220,12 @@ class CompetitionSettingsForm(ModelForm):
 
 
 class TeamForm(ModelForm):
-    required_members = forms.ModelMultipleChoiceField(
-        widget = forms.CheckboxSelectMultiple,
-        queryset = AvailableMember.objects.all(),
-        # queryset=AvailableMember.objects.filter(status="R"), # FIX: SHOWS MEMBERS NOT SPECIFIC TO COMPETITION
-        required=False
-    )
+    # required_members = forms.ModelMultipleChoiceField(
+    #     # widget = forms.CheckboxSelectMultiple,
+    #     queryset = AvailableMember.objects.all(),
+    #     # queryset=AvailableMember.objects.filter(status="R"), # FIX: SHOWS MEMBERS NOT SPECIFIC TO COMPETITION
+    #     required=False
+    # )
     class Meta:
         model=GeneratedTeam
         fields = [
@@ -231,9 +234,52 @@ class TeamForm(ModelForm):
             "team_size",
         ]
     def __init__(self, *args, **kwargs):
-        queryset = kwargs.pop("queryset")
+        # queryset = kwargs.pop("queryset")
         super().__init__(*args, **kwargs)
-        self.fields["required_members"].queryset = queryset
+        # self.fields["required_members"].queryset = queryset
+
+class RequirementsForm(ModelForm):
+    class Meta:
+        model=RequiredMemberToTeam
+        fields = [
+            "member",
+            "event",
+        ]
+    def __init__(self, *args, **kwargs):
+        member_queryset = kwargs.pop("member_queryset")
+        event_queryset = kwargs.pop("member_queryset")
+        generated_team = kwargs.pop("generated_team")
+        requirements = kwargs.pop("requirements")
+        self.generated_team = generated_team
+        self.requirements = requirements
+        self.fields["member"].queryset = member_queryset
+        self.fields["event"].queryset = event_queryset
+        super().__init__(*args, **kwargs)
+    def clean(self):
+        cleaned_data = super().clean()
+        member_id = self.cleaned_data['member']
+        team_id = self.cleaned_data['team']
+        event_id = self.cleaned_data['event']
+        
+        team = GeneratedTeam.objects.get(id=team_id)
+        requirements = RequiredMemberToTeam.objects.filter(team=team)
+        members_used = []
+        event_count = dict()
+        for r in requirements:
+            if len(members_used)>team.team_size:
+                # TODO: FIIIXXXX TEAM MIGHT NOT EVEN EXIST YETT AHHHH MAYBE SEPARATE PAGE TO ADD REQUIREMENTS???
+                raise forms.ValidationError("The number of required members is greater than the max team size.")
+            if r.member not in members_used:
+                members_used.append(r.member)
+            
+        
+
+        if data is not None and data != '':
+            try:
+                data = int(data)
+            except ValueError:
+                raise forms.ValidationError("Invalid ID format. Must be an integer.")
+        return data
 
 class DeleteConfirmationForm(forms.Form):
     confirm = forms.BooleanField()

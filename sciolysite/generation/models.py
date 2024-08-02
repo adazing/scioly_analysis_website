@@ -39,19 +39,6 @@ class GeneratedTeam(models.Model):
 
 # class
 
-class AvailableMember(models.Model):
-    generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
-    # is_officer = models.BooleanField(default = False)
-    # status = models.CharField(max_length=10, choices=IMPORTANCE_CHOICES, default="N")
-    # grade_level = models.PositiveIntegerField()
-    
-    # final_team = models.ForeignKey(GeneratedTeam, on_delete=models.SET_NULL, null=True)
-    is_senior = models.BooleanField(default = False)
-    def __str__(self):
-        is_senior=" (senior)" if self.is_senior else ""
-        is_officer = " (officer)" if self.is_officer else ""
-        return "Member"+is_senior+is_officer+" "+self.name+" in competition "+self.generated_competition_settings.name
     
 class EventType(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
@@ -68,6 +55,21 @@ class AvailableEvent(models.Model):
     is_build_event = models.BooleanField(default=False)
     def __str__(self):
         return self.name
+
+class AvailableMember(models.Model):
+    generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    # is_officer = models.BooleanField(default = False)
+    # status = models.CharField(max_length=10, choices=IMPORTANCE_CHOICES, default="N")
+    # grade_level = models.PositiveIntegerField()
+    # required_team = models.ForeignKey(GeneratedTeam, on_delete=models.SET_NULL, null=True)
+    # required_event = models.ForeignKey(AvailableEvent, on_delete=models.SET_NULL, null=True)
+    # final_team = models.ForeignKey(GeneratedTeam, on_delete=models.SET_NULL, null=True)
+    is_senior = models.BooleanField(default = False)
+    def __str__(self):
+        is_senior=" (senior)" if self.is_senior else ""
+        # is_officer = " (officer)" if self.is_officer else ""
+        return self.name+is_senior+" "+str(self.generated_competition_settings)
 
 class WantedMemberEventPair(models.Model):
     rank = models.PositiveIntegerField()
@@ -91,6 +93,8 @@ class RequiredMemberToTeam(models.Model):
     member = models.ForeignKey(AvailableMember, on_delete = models.CASCADE)
     team = models.ForeignKey(GeneratedTeam, on_delete=models.CASCADE)
     event = models.ForeignKey(AvailableEvent, on_delete=models.CASCADE, null=True)
+
+
 # final generated classes
 
 # class FinalTeamEventPair(models.Model):
