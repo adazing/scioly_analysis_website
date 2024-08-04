@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator
 
 # Create your models here.
 
@@ -25,8 +26,8 @@ class GeneratedTeam(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True,auto_now=False)
     team_size = models.PositiveIntegerField()
-    is_displayed = models.BooleanField(default = True)
-    was_part_of_previous_generation = models.BooleanField(default = False)
+    # is_displayed = models.BooleanField(default = True)
+    # was_part_of_previous_generation = models.BooleanField(default = False)
     class Meta:
         ordering = ["date"]
 

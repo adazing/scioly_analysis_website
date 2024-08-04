@@ -58,7 +58,7 @@ class TeamForm(ModelForm):
             next(reader)  # Skip header
         except:
             raise forms.ValidationError("This is not a valid csv file.")
-        
+        done_events = []
         for i, row in enumerate(reader):
             # see if row length is changes --> tampering with file?
             if i==0:
@@ -72,11 +72,12 @@ class TeamForm(ModelForm):
             except:
                 raise forms.ValidationError("Some of the scores are non-integer values.")
             
-            # if event_name is blank, means reached end of file drugs are great
+            # if event_name is blank, means reached end of file
             event_name=row[0]
             event_name = remove_punctuation(event_name, True)
             if event_name!="":
-                
+                if event_name in done_events:
+                    raise forms.ValidationError("There are some event repeats.")
                 is_at_least_one_member_on_event = False
                 for m in range(1,4):
                     member_name = remove_punctuation(row[m], False)
@@ -84,6 +85,7 @@ class TeamForm(ModelForm):
                         is_at_least_one_member_on_event =True
                 if not is_at_least_one_member_on_event:
                     raise forms.ValidationError("One of the events has no people on it.")
+                done_events.append(event_name)
             else: # reached end
                 break
         return score_data_content

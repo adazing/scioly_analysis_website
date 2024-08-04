@@ -18,19 +18,28 @@
 
             <div class="row align-items-start">
             <div class="col">
-                <select class="form-select">
+                {{form.member}}
+
+                {% for error in form.member.errors  %}
+                <span style='color:red;'>{{error}}</span>
+                {% endfor %}
+                {% comment %} <select class="form-select">
                     {% for m in members_list %}
                     <option value="{{m.id}}" {% if m.required_team != None %} disabled {% endif %}>{{m}}</option>
                     {% endfor %}
-                </select>
+                </select> {% endcomment %}
             </div>
             <div class="col">
-                <select class="form-select">
+                {{form.event}}
+                {% for error in form.event.errors  %}
+                <span style='color:red;'>{{error}}</span>
+                {% endfor %}
+                {% comment %} <select class="form-select">
                     <option value="">None</option>
                     {% for e in events_list %}
                     <option value="{{e.id}}">{{e}}</option>
                     {% endfor %}
-                </select>
+                </select> {% endcomment %}
             </div>
             </div>
         </div>
@@ -42,10 +51,10 @@
                         <div class="container text-center">
                             <div class="row align-items-start">
                                 <div class="col h5">
-                                    {{m}}
+                                    {{m.member.name}}
                                 </div>
                                 <div class="col h5">
-                                    {{m.required_event}}
+                                    {{m.event.name}}
                                 </div>
                             </div>                
                         </div>

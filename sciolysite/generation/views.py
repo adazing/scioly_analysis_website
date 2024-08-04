@@ -22,7 +22,7 @@ import json
 
 # print(data.models.Competition)
 
-
+# TODO: MAKE SURE THAT ONLY ALPHABET LETTERS ARE ALLOWED (NO PUNCTUATION THAT CAN CAUSE XSS ATTACKS)
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
@@ -292,20 +292,58 @@ def editRequirementsView(request, pk):
     generated_team = get_object_or_404(GeneratedTeam, id=pk)
     
     if generated_team.generated_competition_settings.user.id == request.user.id:
-        form = RequirementsForm(request.POST or None)
+        member_queryset = AvailableMember.objects.filter(generated_competition_settings = generated_team.generated_competition_settings)
+        event_queryset = AvailableEvent.objects.filter(generated_competition_settings = generated_team.generated_competition_settings)
+
+        # find all the members required in other teams
+        members_required_in_other_teams = []
+        all_teams = GeneratedTeam.objects.filter(generated_competition_settings = generated_team.generated_competition_settings)
+        for t in all_teams:
+            if t != generated_team:
+                requirements = RequiredMemberToTeam.objects.filter(team=t)
+                for r in requirements:
+                    if r.member not in members_required_in_other_teams:
+                        members_required_in_other_teams.append(r.member)
+        
+        hidden_member_queryset = [m.id for m in members_required_in_other_teams]
+        
+        requirements = RequiredMemberToTeam.objects.filter(team=generated_team)
+        required_members = []
+        events_to_members = {}
+        for r in requirements:
+            if r.member not in required_members:
+                required_members.append(r.member)
+            if r.event:
+                if r.event not in events_to_members:
+                    events_to_members[r.event] = [r.member]
+                elif r.event in events_to_members:
+                    events_to_members[r.event].append(r.member)
+        
+        # hide events with max amount of ppl on them
+        hidden_event_queryset = [e.id for e in events_to_members if len(events_to_members[e]) >= 2+e.needs_3_members]
+        
+        # hide members who reached their max limit
+        for m in required_members:
+            events_done_by_member = [e for e in events_to_members if m in events_to_members[e]]
+            if len(events_done_by_member) >= generated_team.generated_competition_settings.max_events_per_member:
+                hidden_member_queryset.append(m)
+        
+        form = RequirementsForm(request.POST or None, member_queryset=member_queryset, event_queryset=event_queryset, generated_team=generated_team, requirements = requirements, members_required_in_other_teams=members_required_in_other_teams)
         if request.method=="POST":
             if form.is_valid():
                 member = form.cleaned_data.get("member")
                 event = form.cleaned_data.get("event")
-                requirements = RequiredMemberToTeam.objects.filter(team=generated_team)
-                required_members = []
-                events_to_members = {}
-                for r in requirements:
-                    if r.member not in required_members:
-                        required_members.append(r.member)
-                    if r.event not in events_to_members:
-                        events_to_members[event] = [r.member]
-                    elif r.event in events_to_members:
+                RequiredMemberToTeam.objects.create(member=member, event=event, generated_team=generated_team)
+            context = {
+                "form" : form,
+                "hidden_event_queryset" : hidden_event_queryset,
+                "hidden_member_queryset" : hidden_member_queryset,
+                "requirements_list" : requirements,
+            }
+            return render(request, "generation/team_edit.html", context)
+    raise Http404
+
+                    
                         
     
 

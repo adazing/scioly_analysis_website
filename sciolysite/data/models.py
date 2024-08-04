@@ -31,6 +31,8 @@ class EventMemberInstance(models.Model):
     score = models.PositiveIntegerField()
     def __str__(self):
         return "score of "+str(self.score)+" for "+self.event_name+" for Team "+self.team.name+" for Competition "+self.team.competition.name
+    # class Meta:
+    #     unique_together = ('event_name', 'team')
     
 # What members were on the event instance (which members you're actually talking about for event instance) 
 class Member(models.Model):
