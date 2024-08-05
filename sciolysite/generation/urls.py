@@ -13,6 +13,8 @@ urlpatterns = [
     # path('start-real-generation/<str:pk>/', views.generateTeams, name="generateTeams"),
     # path('generated-competition/<str:pk>/', views.finalGeneratedCompetitionView, name="finalGeneratedCompetitionView"),
     path('generate/<str:pk>/', views.frontend_generate, name="frontedGenerate"),
+    path('edit-requirements/<str:pk>/', views.editRequirementsView, name="editRequirementsView"),
+    path('delete-requirement/<str:pk>/', views.deleteRequirement, name="deleteRequirement"),
     # when edit final generated competition, it causes the generatedCompetitionView to be deleted! Fixed
     # all required members shown when generating teams - fixed
     # make sure conflicting events data has at least 2 events per row

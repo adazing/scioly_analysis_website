@@ -1,6 +1,7 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
+    <a href="{% url 'generatedCompetitionsListView' %}" class="btn btn-primary">Back</a>
         <div class="jumbotron">
             <h1 class="display-4">{{generated_competition_settings.name}}</h1>
             <p class="lead">{{generated_competition_settings.notes}}</p>
@@ -21,7 +22,8 @@
                 <div class="card-body">
                     <p class="card-text">{{t.notes}}</p>
                     <p class="card-text">{{t.team_size}}</p>
-                    <a href="{% url 'generatedTeamEditView' pk=t.id %}" class="btn btn-primary">Edit</a>
+                    <a href="{% url 'generatedTeamEditView' pk=t.id %}" class="btn btn-primary">Edit Settings</a>
+                    <a href="{% url 'editRequirementsView' pk=t.id %}" class="btn btn-secondary">Edit Requirements</a>
                     <a href="{% url 'generatedTeamDeleteView' pk=t.id %}" class="btn btn-danger">Delete</a>
                 </div>
             </div>

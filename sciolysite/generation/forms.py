@@ -244,6 +244,7 @@ class TeamForm(ModelForm):
             raise forms.ValidationError("Team size is too small (must be at least 1).")
         elif team_size > 15:
             raise forms.ValidationError("Team size is too large (must be at most 15).")
+        return team_size
     
 class RequirementsForm(ModelForm):
     class Meta:
@@ -259,6 +260,8 @@ class RequirementsForm(ModelForm):
         requirements = kwargs.pop("requirements")
         # events_with_3_members = kwargs.pop("events_with_3_members")
         members_required_in_other_teams = kwargs.pop("members_required_in_other_teams")
+
+        super(RequirementsForm, self).__init__(*args, **kwargs)
         # event_conflicts = kwargs.pop("event_conflicts")
         self.generated_team = generated_team
         self.requirements = requirements
@@ -267,12 +270,14 @@ class RequirementsForm(ModelForm):
         # self.event_conflicts = event_conflicts
         self.fields["member"].queryset = member_queryset
         self.fields["event"].queryset = event_queryset
-        super().__init__(*args, **kwargs)
+        self.fields["event"].empty_label = "None"
+        self.fields["event"].required = False
+        # super().__init__(*args, **kwargs)
 
     def clean(self):
-        cleaned_data = self.cleaned_data
-        member_id = cleaned_data['member']
-        event_id = cleaned_data['event']
+        cleaned_data = super().clean()
+        member = cleaned_data['member']
+        event = cleaned_data['event']
         required_members = []
         events_to_members = {}
         for r in self.requirements:
@@ -283,14 +288,15 @@ class RequirementsForm(ModelForm):
                     events_to_members[r.event] = [r.member]
                 elif r.event in events_to_members:
                     events_to_members[r.event].append(r.member)
-        if event_id:
-            event = AvailableEvent.objects.get(id = event_id)
-        else:
-            event = None
-        member = AvailableMember.objects.get(id = member_id)
+        # if event_id:
+        #     event = AvailableEvent.objects.get(id = event_id)
+        # else:
+        #     event = None
+        
+        # member = AvailableMember.objects.get(id = member_id)
 
         # new member would cause the team to go over the size limit
-        if len(required_members) >= self.generated_team.generated_competition_settings.team_size:
+        if len(required_members) >= self.generated_team.team_size:
             raise forms.ValidationError("You have required too many members to be on the same team.")
 
         if member.is_senior:
@@ -313,9 +319,10 @@ class RequirementsForm(ModelForm):
         
         if event != None:
             # there is already enough members in the event
-            if len(events_to_members[event])>=2+(event.needs_3_members):
-                raise forms.ValidationError("Too many members are required for the event "+event.name)
-        
+            if event in events_to_members:
+                if len(events_to_members[event])>=2+int(event.needs_3_members):
+                    raise forms.ValidationError("Too many members are required for the event "+event.name)
+            
             # member has already reached max build events
             if event.is_build_event:
                 build_events_that_member_has = [e for e in events_done_by_member if e.is_build_event]
@@ -323,11 +330,11 @@ class RequirementsForm(ModelForm):
                     raise forms.ValidationError("Too many build events are required for "+member.name)
         
         # check if assigned to conflicting events 
-        conflicts = []
-        for e in events_done_by_member+[event]:
-            if e.conflict in conflicts:
-                raise forms.ValidationError(member.name+" cannot be placed in two events that have conflicting time slots.")
-            conflicts.append(e.conflict)
+            conflicts = []
+            for e in events_done_by_member+[event]:
+                if e.conflict in conflicts:
+                    raise forms.ValidationError(member.name+" cannot be placed in two events that have conflicting time slots.")
+                conflicts.append(e.conflict)
         return cleaned_data
         # 
         # cleaned_data = super().clean()

@@ -24,7 +24,7 @@
         return true;
     };
 
-    function is_valid_team_addition(event, member, team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events) {
+    function is_valid_team_addition(event, member, team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors) {
         {% comment %} console.log("check") {% endcomment %}
         var events_done_by_member = Object.keys(team).filter(function(e) {
             return team[e].includes(member);
@@ -73,9 +73,6 @@
                     return false;
                 }
             }
-        
-
-        // TODO: ADD SENIOR RESTRICTIONS
         }
         {% comment %} events_done_by_member.forEach(function(e) {
             conflicting_events.forEach(function(c, index) {
@@ -96,6 +93,21 @@
             });
         });
          {% endcomment %}
+        if (member in seniors){
+            let curr_seniors_on_team = [];
+            for (let [event, members] of Object.entries(team)){
+                for (let m of members){
+                    if (seniors.includes(m) && !curr_seniors_on_team.includes(m)){
+                        curr_seniors_on_team.push(m);
+                        if (curr_seniors_on_team.length >= 7){
+                            console.log("hi");
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
         return true;
     }
 
@@ -455,9 +467,55 @@
       }
       
 
+        {% comment %}
+            "required_members_on_events" : required_members_on_events,
+            "required_members" : required_members,
+            "seniors" : seniors,
+            "teams" : [t.team_size for t in teams],
+            "members_to_ranked_preferences" : members_to_ranked_preferences,
+            "member_member_event_pairs" : json.dumps(member_member_event_pairs),
+            "generated_competition_settings" : generated_competition_settings,
+            "available_members" : available_members,
+            "available_events" : available_events,
+            "events_with_3_members" : events_with_3_members,
+            "build_events" : build_events,
+            "worst_preference_amount" : worst_preference_amount,
+            "members_to_skill_level" : members_to_skill_level,
+            "members_to_experience" : members_to_experience,
+            "build_events" : build_events,
+            "conflicting_events" : conflicting_events,
+            # "required_member_event_pairs" : required_member_event_pairs,
+            "event_types" : event_types,
+            "min_score" : min_score,
+        {% endcomment %}
+    let all_teams_required_members_on_events = {{required_members_on_events|safe}};
+    let all_teams_required_members = {{required_members|safe}};
+    {% comment %} {% else %} {% endcomment %}
+    {% comment %} let required_members = []; {% endcomment %}
+    let seniors = {{seniors|safe}};
+    let teams = {{teams|safe}};
+    let members_to_ranked_preferences = {{members_to_ranked_preferences|safe}};
+    let member_member_event_pairs = {{member_member_event_pairs|safe}};
+    let min_event_experience = {{generated_competition_settings.min_event_experience}};
+    let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
+    let available_members = {{available_members|safe}};
     let available_events = {{available_events|safe}};
-    {% comment %} let ranked_members = {{ranked_members|safe}}; {% endcomment %}
+    let events_with_3_members = {{events_with_3_members|safe}};
+    let build_events = {{build_events|safe}};
+    let worst_preference_amount = {{worst_preference_amount}};
+    let members_to_skill_level = {{members_to_skill_level|safe}};
+    let members_to_experience = {{members_to_experience|safe}};
+    let conflicting_events = {{conflicting_events|safe}};
+    let event_types = {{event_types|safe}};
     let min_score = {{min_score}};
+    let max_events_per_member = {{generated_competition_settings.max_events_per_member}};
+    let min_events_per_member = {{generated_competition_settings.min_events_per_member}};
+    let max_num_of_build_events_per_member = {{generated_competition_settings.max_num_of_build_events_per_member}};
+
+
+
+    {% comment %} let ranked_members = {{ranked_members|safe}}; {% endcomment %}
+    {% comment %} let min_score = {{min_score}};
     let teams = {{teams|safe}};
     let members_to_ranked_preferences = {{members_to_ranked_preferences|safe}};
     let member_member_event_pairs = {{member_member_event_pairs|safe}};
@@ -469,18 +527,11 @@
     let required_member_event_pairs = {{required_member_event_pairs|safe}};
     let event_types = {{event_types|safe}};
     let min_event_experience = {{generated_competition_settings.min_event_experience}};
-    let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
+    let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}}; {% endcomment %}
 
     // CHANGEDDDDDD STUFFF HISUGIESYURYYUTRYUNTFCDFVYUVCDTFVYGBUHNIJVFTCVYGBUHNIJUBYVFTYINJVYFYGINVFTCFVYUBNHBVFTCVYGBUHBVTCFVYGBUHNGVFTCVYGBUHNBVFTCVGB
 
 
-    {% comment %} let max_events_per_member = {{generated_competition_settings.max_events_per_member}}; {% endcomment %}
-    let max_events_per_member = 4;
-    let min_events_per_member = {{generated_competition_settings.min_events_per_member}};
-    let max_num_of_build_events_per_member = {{generated_competition_settings.max_num_of_build_events_per_member}};
-    {% comment %} let conflicting_events = {{conflicting_events|safe}}; {% endcomment %}
-    let conflicting_events = [];
-    let required_members_on_specific_teams = {{required_members_on_specific_teams|safe}}
     let spinner = document.getElementById("spinner");
 
     function generateTeams(callback) {
@@ -781,6 +832,7 @@
     {% comment %} console.log(make_team2(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member)); {% endcomment %}
 
     function make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score) {
+
         var team = {};
         // fill best team with empty slots
         for (var i = 0; i < available_events.length; i++) {
@@ -809,7 +861,7 @@
                     var temp_team = JSON.parse(JSON.stringify(new_team));
                     for (let [event, level] of Object.entries(members_to_skill_level[member])){
                         // can add new event-member pair
-                        if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                        if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                             if (member=="Arjun Sriskanthan"){
                                 console.log("mad 1");
                                 console.log(event);
@@ -826,7 +878,7 @@
                                 let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
                                 if (count > min_events_per_member){
                                     temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                                         temp_team[event].push(member);
                                         var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                         if (temp_score>best_temp_score){
@@ -867,7 +919,7 @@
                         for (let event of available_events){ // MIGHT NEED TO CHANGE THIS IF CHANGE HOW TEAM IS SCORED!!!!!!!
                             temp_team = JSON.parse(JSON.stringify(new_team));
                             // there is room in event
-                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)){
                                 temp_team[event].push(member);
                                 temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                 if (temp_score > best_overall_temp_score){
@@ -887,7 +939,7 @@
                                     let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
                                     if (count>min_events_per_member){
                                         temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                                             temp_team[event].push(member);
                                             var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                             if (temp_score>best_overall_temp_score){
@@ -943,7 +995,7 @@
                     var temp_team = JSON.parse(JSON.stringify(new_team));
                     for (let [event, level] of Object.entries(members_to_skill_level[member])){
                         // can add new event-member pair
-                        if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                        if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                             if (member=="Arjun Sriskanthan"){
                                 console.log("mad 1");
                                 console.log(event);
@@ -960,7 +1012,7 @@
                                 let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
                                 if (count > min_events_per_member){
                                     temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                    if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                                         temp_team[event].push(member);
                                         var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                         if (temp_score>best_temp_score){
@@ -1001,7 +1053,7 @@
                         for (let event of available_events){ // MIGHT NEED TO CHANGE THIS IF CHANGE HOW TEAM IS SCORED!!!!!!!
                             temp_team = JSON.parse(JSON.stringify(new_team));
                             // there is room in event
-                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                            if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)){
                                 temp_team[event].push(member);
                                 temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                 if (temp_score > best_overall_temp_score){
@@ -1021,7 +1073,7 @@
                                     let count = Object.keys(temp_team).filter(e => temp_team[e].includes(other_member)).length;
                                     if (count>min_events_per_member){
                                         temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                                        if (is_valid_team_addition(event, member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                                             temp_team[event].push(member);
                                             var temp_score = calculate_team_score(temp_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                                             if (temp_score>best_overall_temp_score){
@@ -1077,7 +1129,7 @@
             for (event of available_events){
                 for (member of team_members){
                     new_team = JSON.parse(JSON.stringify(team));
-                    if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
+                    if (is_valid_team_addition(event, member, new_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)) {
                         new_team[event].push(member);
                         console.log(new_team);
                         new_team_score = calculate_team_score(new_team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
@@ -1115,7 +1167,8 @@
         return JSON.parse(JSON.stringify(team));
     }
 
-    function find_optimal_event_addition(new_temp_team, temp_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size){
+    function find_optimal_event_addition(new_temp_team, temp_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors){
+        console.log(new_temp_team, temp_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors);
         let orig_score = 0;
         let best_temp_team = null;
         let best_temp_score = Number.NEGATIVE_INFINITY;
@@ -1124,8 +1177,8 @@
         for (let event of available_events){
             {% comment %} console.log(event, temp_member);
             console.log(is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)); {% endcomment %}
-            if (is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
-                {% comment %} console.log("good"); {% endcomment %}
+            if (is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)){
+                console.log("good");
                 // add member to event if possible
                 let temp_team = deep_copy(new_temp_team);
                 temp_team[event].push(temp_member);
@@ -1133,7 +1186,7 @@
                 {% comment %} console.log(new_score - orig_score); {% endcomment %}
                 {% comment %} console.log("adding", new_score); {% endcomment %}
                 if (new_score - orig_score >= best_temp_score){
-
+                    console.log("better")
                     best_temp_team = deep_copy(temp_team);
                     best_temp_score = new_score - orig_score;
                 }
@@ -1148,7 +1201,7 @@
                         let temp_team = deep_copy(new_temp_team);
                         let orig_temp_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                         temp_team[event].splice(temp_team[event].indexOf(other_member), 1);
-                        if (is_valid_team_addition(event, temp_member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)){
+                        if (is_valid_team_addition(event, temp_member, temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)){
                             {% comment %} console.log("valid"); {% endcomment %}
                             temp_team[event].push(temp_member);
                             let new_temp_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
@@ -1156,10 +1209,10 @@
                             {% comment %} console.log("comparison");
                             console.log(new_temp_score - orig_temp_score);
                             console.log(best_temp_score); {% endcomment %}
-                            if (temp_member=="Eden Hoong" && other_member=="Ada Langford" && event=="Wind Power"){
+                            {% comment %} if (temp_member=="Eden Hoong" && other_member=="Ada Langford" && event=="Wind Power"){
                                 
                                 console.log(new_temp_score, orig_temp_score);
-                            }
+                            } {% endcomment %}
                             if (new_temp_score - orig_temp_score >= best_temp_score){
                                 best_temp_team = deep_copy(temp_team);
                                 best_temp_score = new_temp_score - orig_temp_score;
@@ -1169,10 +1222,11 @@
                 }
             }
         }
+        console.log(best_temp_team);
         return best_temp_team;
     }
 
-function find_optimal_member_addition(team, team_members, member_options, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size){
+function find_optimal_member_addition(team, team_members, member_options, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors){
     let best_new_team = null;
     let best_new_member = null;
     let best_new_score = Number.NEGATIVE_INFINITY;
@@ -1183,7 +1237,8 @@ function find_optimal_member_addition(team, team_members, member_options, member
             {% comment %} let count = 0; {% endcomment %}
             let changed = true;
             while (count < max_events_per_member){
-                let best_temp_team = deep_copy(find_optimal_event_addition(new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size));
+                let best_temp_team = deep_copy(find_optimal_event_addition(new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors));
+                console.log(best_temp_team);
                 if (best_temp_team != null){
                     new_team = deep_copy(best_temp_team);
                     count += 1;
@@ -1193,6 +1248,7 @@ function find_optimal_member_addition(team, team_members, member_options, member
                 }
             }
             if (changed){
+                
                 let new_score = calculate_team_score(new_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
                 if (new_score >= best_new_score){
                     best_new_score = new_score;
@@ -1206,7 +1262,8 @@ function find_optimal_member_addition(team, team_members, member_options, member
     return [best_new_team, best_new_member];
 }
 
-function make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score) {
+function make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors) {
+    console.log(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors);
     var team = {};
     // fill best team with empty slots
     for (var i = 0; i < available_events.length; i++) {
@@ -1223,12 +1280,12 @@ function make_team4(available_events, members_to_ranked_preferences, member_memb
         team[event].push(member);
     }
     while (team_members.length < required_members.length){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, required_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size);
+        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, required_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors);
         team = deep_copy(best_new_team);
         team_members.push(best_new_member);
     }
     while (team_members.length < team_size){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, Object.keys(members_to_skill_level), members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size);
+        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, Object.keys(members_to_skill_level), members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors);
         team = deep_copy(best_new_team);
         team_members.push(best_new_member);
     }
@@ -1241,8 +1298,15 @@ function make_teams(available_events, members_to_ranked_preferences, member_memb
 }
 
 {% comment %} console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang", "Eli Tabak"], min_score)); {% endcomment %}
-console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, [["Ada Langford", "Wind Power"], ["Kevin Dong", "Robot Tour"]], event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Ada Langford"], min_score));
+console.log(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, [["Ada Langford", "Wind Power"], ["Kevin Dong", "Robot Tour"]], event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Ada Langford"], min_score, seniors));
 
+function generateAllTeams(available_events, members_to_ranked_preferences, member_member_event_pairs, teams, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, all_teams_required_members_on_events, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, all_teams_required_members, min_score, seniors){
+    teams_list = []
+    for (let t = 0; t<teams.length; t++){
+        teams_list.push(make_team4(available_events, members_to_ranked_preferences, member_member_event_pairs, teams[t], events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, all_teams_required_members_on_events[t], event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, all_teams_required_members[t], min_score, seniors));
+    }
+    console.log(teams_list);
+}
 
 {% comment %} console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, [], min_score)); {% endcomment %}
 
