@@ -1136,8 +1136,9 @@ def frontend_generate(request, pk):
         context = {
             # "available_members" : available_members,
             # "required_members_on_specific_teams" : required_members_on_specific_teams,
-            "required_members_on_events" : [None if not t else t for t in required_members_on_events],
-            "required_members" : [None if not t else t for t in required_members],
+            "id" : pk,
+            "required_members_on_events" : required_members_on_events,
+            "required_members" : required_members,
             "seniors" : seniors,
             "teams" : [t.team_size for t in teams],
             "members_to_ranked_preferences" : members_to_ranked_preferences,
