@@ -2,7 +2,7 @@
 {% load crispy_forms_tags %}
 {% block bodycontent %}
 <a href="{% url 'generatedCompetitionSettingsView' pk=generated_team.generated_competition_settings.id %}" class="btn btn-primary">Back</a>
-<div class="form-control border border-success border-5" id = "requirement_additions">
+<div class="form-control text-white bg-secondary" id = "requirement_additions">
     <form method="POST" id = "requirement_additions_form">
         Add Requirements:
         <br><br>
@@ -65,10 +65,10 @@
                 <div class="container text-center">
                     <div class="row align-items-start">
                         <div class="col">
-                            {{m.member.name}}
+                            {{m.member}}
                         </div>
                         <div class="col">
-                            {{m.event.name}}
+                            {{m.event}}
                         </div>
                         <div class="col">
                             <a href="{% url 'deleteRequirement' pk=m.id %}" class="btn btn-danger">Delete</a>

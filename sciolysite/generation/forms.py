@@ -280,6 +280,7 @@ class RequirementsForm(ModelForm):
         event = cleaned_data['event']
         required_members = []
         events_to_members = {}
+        generally_required_members = []
         for r in self.requirements:
             if r.member not in required_members:
                 required_members.append(r.member)
@@ -288,6 +289,8 @@ class RequirementsForm(ModelForm):
                     events_to_members[r.event] = [r.member]
                 elif r.event in events_to_members:
                     events_to_members[r.event].append(r.member)
+            else:
+                generally_required_members.append(r.member)
         # if event_id:
         #     event = AvailableEvent.objects.get(id = event_id)
         # else:
@@ -299,7 +302,7 @@ class RequirementsForm(ModelForm):
         if len(required_members) >= self.generated_team.team_size:
             raise forms.ValidationError("You have required too many members to be on the same team.")
 
-        if member.is_senior:
+        if member.is_senior and member not in required_members:
             seniors = [m for m in required_members if m.is_senior]
             # check if too many seniors have been assigned
             if len(seniors) >= 7:
@@ -313,11 +316,11 @@ class RequirementsForm(ModelForm):
         if len(events_done_by_member) >= self.generated_team.generated_competition_settings.max_events_per_member:
             raise forms.ValidationError("Too many events required for "+member.name)
         # member is already required on the event
-        if event in events_done_by_member:
+        if event in events_done_by_member or (event is None and member in generally_required_members):
             raise forms.ValidationError("This requirement already exists")
         
         
-        if event != None:
+        if event is not None:
             # there is already enough members in the event
             if event in events_to_members:
                 if len(events_to_members[event])>=2+int(event.needs_3_members):

@@ -55,7 +55,8 @@ class AvailableEvent(models.Model):
     event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True)
     is_build_event = models.BooleanField(default=False)
     def __str__(self):
-        return self.name
+        build = " (build)" if self.is_build_event else ""
+        return self.name + build
 
 class AvailableMember(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
@@ -70,7 +71,7 @@ class AvailableMember(models.Model):
     def __str__(self):
         is_senior=" (senior)" if self.is_senior else ""
         # is_officer = " (officer)" if self.is_officer else ""
-        return self.name+is_senior+" "+str(self.generated_competition_settings)
+        return self.name+is_senior
 
 class WantedMemberEventPair(models.Model):
     rank = models.PositiveIntegerField()

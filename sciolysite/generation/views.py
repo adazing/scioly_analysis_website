@@ -311,9 +311,12 @@ def editRequirementsView(request, pk):
         requirements = RequiredMemberToTeam.objects.filter(team=generated_team)
         required_members = []
         events_to_members = {}
+        seniors = []
         for r in requirements:
             if r.member not in required_members:
                 required_members.append(r.member)
+            if r.member.is_senior and r.member not in seniors:
+                seniors.append(r.member)
             if r.event:
                 if r.event not in events_to_members:
                     events_to_members[r.event] = [r.member]
@@ -328,7 +331,12 @@ def editRequirementsView(request, pk):
             events_done_by_member = [e for e in events_to_members if m in events_to_members[e]]
             if len(events_done_by_member) >= generated_team.generated_competition_settings.max_events_per_member:
                 hidden_member_queryset.append(m.id)
-        
+        # hide seniors if max seniors has been reached
+        if len(seniors) >= 7:
+            for s in AvailableMember.objects.filter(generated_competition_settings=generated_team.generated_competition_settings, is_senior=True):
+                if s not in required_members:
+                    hidden_member_queryset.append(s.id)
+            
         form = RequirementsForm(request.POST or None, member_queryset=member_queryset, event_queryset=event_queryset, generated_team=generated_team, requirements = requirements, members_required_in_other_teams=members_required_in_other_teams)
         if request.method=="POST":
             if form.is_valid():

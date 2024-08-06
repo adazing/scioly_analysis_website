@@ -1,5 +1,9 @@
 {% extends 'main.html' %}
-
+    {% block headercontent %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+    
+    {% endblock %}
 
     {% block bodycontent %}
     {% comment %} {{id }} {% endcomment %}
@@ -12,11 +16,14 @@
       <div id="generated-table">
 
       </div>
+      <div id="btn-div"></div>
+
     {% endblock %}
 
 
     {% block scriptcontent%}
     
+
     Set.prototype.isSubsetOf = function (otherSet) {
         for (let elem of this) {
             if (!otherSet.has(elem)) {
@@ -99,7 +106,7 @@
         });
          {% endcomment %}
 
-        if (member in seniors){
+        if (seniors.includes(member) && !members_on_team.has(member)){
             let curr_seniors_on_team = [];
             for (let [event, members] of Object.entries(team)){
                 for (let m of members){
@@ -590,6 +597,33 @@
             generated_table_div.appendChild(generated_table);
         }
 
+        // display download 
+        let btn_div = document.getElementById("btn-div");
+        let btn = document.createElement("button");
+        let text = document.createTextNode("Download XLSX file");
+        btn.appendChild(text);
+        btn.id = "downloadBtn";
+        btn.classList.add("btn");
+        btn.classList.add("btn-primary");
+        btn.onclick = function() {
+            let tables_div = document.getElementById("generated-table");
+            let tables = tables_div.getElementsByTagName("table");
+            const workbook = XLSX.utils.book_new();
+            for (let i=0; i<tables.length; i++){
+                worksheet = XLSX.utils.table_to_sheet(tables[i]);
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet'+i.toString());
+            }
+            {% comment %} const worksheet = XLSX.utils.aoa_to_sheet([
+            ['Header 1', 'Header 2', 'Header 3'],
+            ['Value 1', 'Value 2', 'Value 3'],
+            ['Another 1', 'Another 2', 'Another 3']
+            ])
+            worksheet['A1'].s = { fill: { fgColor: { rgb: "E9E9E9" } } }; {% endcomment %}
+            {% comment %} XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1'); {% endcomment %}
+            
+            XLSX.writeFile(workbook, "Teams.xlsx", { compression: true });
+        };
+        btn_div.appendChild(btn);
 
 
     }
@@ -1275,6 +1309,7 @@ function find_optimal_member_addition(team, team_members, member_options, member
 
 function make_team4(available_members, available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors) {
     {% comment %} console.log(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors); {% endcomment %}
+    {% comment %} console.log("available_members", available_members); {% endcomment %}
     var team = {};
     // fill best team with empty slots
     for (var i = 0; i < available_events.length; i++) {
@@ -1298,7 +1333,7 @@ function make_team4(available_members, available_events, members_to_ranked_prefe
         available_members.splice(available_members.indexOf(best_new_member), 1); {% endcomment %}
     }
     while (team_members.length < team_size){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, Object.keys(members_to_skill_level), members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
+        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, available_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
         team = deep_copy(best_new_team);
         team_members.push(best_new_member);
         {% comment %} console.log(available_members);
@@ -1378,17 +1413,17 @@ function generateAllTeams(callback, available_events, members_to_ranked_preferen
 
     setTimeout(function(){
         for (let t = 0; t<teams.length; t++){
-            console.log(available_members);
+            {% comment %} console.log(available_members); {% endcomment %}
             let [generated_team, team_members]  = make_team4(available_members, available_events, members_to_ranked_preferences, member_member_event_pairs, teams[t], events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, all_teams_required_members_on_events[t], event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, all_teams_required_members[t], min_score, seniors);
-            console.log(generated_team, team_members);
-            console.log(available_members);
-            available_members = available_members.filter((element) => !team_members.includes(element));
-            console.log(available_members);
+            {% comment %} console.log(generated_team, team_members);
+            console.log(available_members); {% endcomment %}
+            available_members = available_members.filter((member) => !team_members.includes(member));
+            {% comment %} console.log(available_members); {% endcomment %}
             teams_list.push(generated_team);
         }
         callback(teams_list);
         console.log(teams_list);
-        spinner.style.visibility = "hidden";    
+        spinner.style.visibility = "hidden";
     }, 100);
 }
 
