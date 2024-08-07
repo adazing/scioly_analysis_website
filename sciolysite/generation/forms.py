@@ -24,24 +24,24 @@ class MultipleChoiceAnyField(forms.MultipleChoiceField):
         return True
 
 class CompetitionSettingsForm(ModelForm):
-    available_events = forms.FileField(required=True)
+    available_events = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=True)
     # File Structure:
     # Event1,Event2 (3),Event3,Event4 <--- these are event types, all the events in each row are of the same type
     # Event5,Event6,Event7 (3), <--- (3) means that the events can hold up to 3 people (above the normal 2 ppl per event)
     # ...
-    conflicting_events = forms.FileField(required=False)
+    conflicting_events = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
     # File Structure:
     # Event1,Event2,Event4 <--- these are conflict times, all the events in each row conflict each other (are in the same timeblock)
     # Event3,Event7,
     # ...
-    member_event_preferences_data = forms.FileField(required=True)
+    member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=True)
     # File Structure:
     # Member1 (S),Event1,Event4,Event2 <--- these are the ranked events people want per person
     # Member2 (O),Event3,Event6 (*),Event5 (*) <--- (*) means that it is required
     # Member3,,, <--- if no preferences, make everyone have no event rankings
     #  ^ key: (S)=senior, (O)=officer, (R)=required member
     # ...
-    member_member_event_preferences_data = forms.FileField(required=False)
+    member_member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
     # File Structure:
     # Member1,Member2,Event3 <--- this are a list of people who want to be together on a certain event
     # Member3,Member5,, <--- Null event means that any event counts

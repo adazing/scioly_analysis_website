@@ -501,6 +501,7 @@
             "event_types" : event_types,
             "min_score" : min_score,
         {% endcomment %}
+    let pastel_colors = ["FFE9D0", "FFFED3", "BBE9FF", "B1AFFF", "E7F0DC", "E7D4B5", "EF9C66", "C8CFA0", "E1ACAC", "E1AFD1", "E493B3"];
     let all_teams_required_members_on_events = {{required_members_on_events|safe}};
     let all_teams_required_members = {{required_members|safe}};
     {% comment %} {% else %} {% endcomment %}
@@ -611,15 +612,17 @@
             const workbook = XLSX.utils.book_new();
             for (let i=0; i<tables.length; i++){
                 worksheet = XLSX.utils.table_to_sheet(tables[i]);
+                for (let e=0; e<available_events.length; e++){
+                    for (let t=0; t<event_types.length; t++){
+                        if (event_types[t].includes(available_events[e])){
+                            {% comment %} console.log(String.fromCharCode(65+e)+"1"); {% endcomment %}
+                            worksheet["A"+(e+1).toString()].s = { fill: { fgColor: { rgb: pastel_colors[t % pastel_colors.length] } } };
+                        }
+                    }
+
+                }
                 XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet'+i.toString());
             }
-            {% comment %} const worksheet = XLSX.utils.aoa_to_sheet([
-            ['Header 1', 'Header 2', 'Header 3'],
-            ['Value 1', 'Value 2', 'Value 3'],
-            ['Another 1', 'Another 2', 'Another 3']
-            ])
-            worksheet['A1'].s = { fill: { fgColor: { rgb: "E9E9E9" } } }; {% endcomment %}
-            {% comment %} XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1'); {% endcomment %}
             
             XLSX.writeFile(workbook, "Teams.xlsx", { compression: true });
         };
@@ -869,7 +872,7 @@
     }
 
 
-    {% comment %} console.log(make_team2(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member)); {% endcomment %}
+    {% comment %} console.log(make_team2(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member));
 
     function make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score) {
 
@@ -880,11 +883,11 @@
             team[event] = [];
         }
         var team_members = [];
-        {% comment %} var max_spots_per_member = Math.min(Math.floor((available_events.length*2 + events_with_3_members.length)/team_size), max_events_per_member); {% endcomment %}
+        var max_spots_per_member = Math.min(Math.floor((available_events.length*2 + events_with_3_members.length)/team_size), max_events_per_member);
         var max_spots_per_member = max_events_per_member;
 
-        {% comment %} // room for more spots beyond max_spots_per_member {% endcomment %}
-        {% comment %} var extra_spots = available_events.length*2 + events_with_3_members.length - max_spots_per_member * team_size; {% endcomment %}
+        // room for more spots beyond max_spots_per_member
+        var extra_spots = available_events.length*2 + events_with_3_members.length - max_spots_per_member * team_size;
         
 
         //iterate until all the people are on the team
@@ -944,15 +947,15 @@
                             break;
                         }
                     }
-                    {% comment %} if (member=="Arjun Sriskanthan"){
+                    if (member=="Arjun Sriskanthan"){
                         console.log(events_added);
                         console.log(min_events_per_member);
-                    } {% endcomment %}
+                    }
                     // no more empty spots left, must replace or add to event they don't have experience with even if it is not optimal.
                     while (events_added < min_events_per_member){ // make sure they at least follow the requirements & already know that no more empty spots left
-                        {% comment %} if (member=="Arjun Sriskanthan"){
+                        if (member=="Arjun Sriskanthan"){
                             console.log("should be in the process of fixing");
-                        } {% endcomment %}
+                        }
                         var best_overall_temp_team = JSON.parse(JSON.stringify(new_team));
                         var best_overall_temp_score = Number.NEGATIVE_INFINITY;
                         var changed = false;
@@ -966,8 +969,6 @@
                                     best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
                                     best_overall_temp_score = temp_score;
                                     changed = true;
-                                    {% comment %} console.log("hi");
-                                    console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                 }
                             }else{ // there is no room left in event, need to replace
                                 for (let other_member of new_team[event]){
@@ -986,8 +987,6 @@
                                                 best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
                                                 best_overall_temp_score = temp_score;
                                                 changed = true;
-                                                {% comment %} console.log("hi");
-                                                console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                             }
                                         }
                                     }
@@ -999,8 +998,6 @@
                             events_added += 1;
                             new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
                         }else{
-                            {% comment %} console.log("bad and sad");
-                            console.log(team); {% endcomment %}
                             break;
                         }
                     }
@@ -1078,15 +1075,8 @@
                             break;
                         }
                     }
-                    {% comment %} if (member=="Arjun Sriskanthan"){
-                        console.log(events_added);
-                        console.log(min_events_per_member);
-                    } {% endcomment %}
                     // no more empty spots left, must replace or add to event they don't have experience with even if it is not optimal.
                     while (events_added < min_events_per_member){ // make sure they at least follow the requirements & already know that no more empty spots left
-                        {% comment %} if (member=="Arjun Sriskanthan"){
-                            console.log("should be in the process of fixing");
-                        } {% endcomment %}
                         var best_overall_temp_team = JSON.parse(JSON.stringify(new_team));
                         var best_overall_temp_score = Number.NEGATIVE_INFINITY;
                         var changed = false;
@@ -1100,8 +1090,6 @@
                                     best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
                                     best_overall_temp_score = temp_score;
                                     changed = true;
-                                    {% comment %} console.log("hi");
-                                    console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                 }
                             }else{ // there is no room left in event, need to replace
                                 for (let other_member of new_team[event]){
@@ -1120,8 +1108,6 @@
                                                 best_overall_temp_team = JSON.parse(JSON.stringify(temp_team));
                                                 best_overall_temp_score = temp_score;
                                                 changed = true;
-                                                {% comment %} console.log("hi");
-                                                console.log(JSON.parse(JSON.stringify(temp_team))); {% endcomment %}
                                             }
                                         }
                                     }
@@ -1133,8 +1119,6 @@
                             events_added += 1;
                             new_team = JSON.parse(JSON.stringify(best_overall_temp_team));
                         }else{
-                            {% comment %} console.log("bad and sad");
-                            console.log(team); {% endcomment %}
                             break;
                         }
                     }
@@ -1165,7 +1149,6 @@
             console.log("heyyy empty")
             best_score = Number.NEGATIVE_INFINITY;
             best_team = null;
-            {% comment %} var changed = false; {% endcomment %}
             for (event of available_events){
                 for (member of team_members){
                     new_team = JSON.parse(JSON.stringify(team));
@@ -1179,7 +1162,6 @@
                             console.log("hi");
                             best_team = JSON.parse(JSON.stringify(new_team));
                             best_score = new_team_score;
-                            {% comment %} changed = true; {% endcomment %}
                         }
                     }
                 }
@@ -1197,34 +1179,77 @@
         console.log(team_members);
         return team;
     }
-
-    {% comment %} console.log("final"); {% endcomment %}
-
-    {% comment %} console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, ["Albert Ming Wei", "Brian Zhao", "David Huang", "Joning Wang", "Kelly Deng", "Kevin Daniel", "Rick Yang", "Eli Tabak"], min_score)); {% endcomment %}
-    {% comment %} console.log(make_team3(available_events, members_to_ranked_preferences, member_member_event_pairs, 15, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, [], min_score)); {% endcomment %}
+    {% endcomment %}
 
     function deep_copy(team){
         return JSON.parse(JSON.stringify(team));
     }
 
-    function find_optimal_event_addition(new_temp_team, temp_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events){
+    function calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score) {
+        var total_skill_score = 0;
+        var total_preference_score = 0;
+        {% comment %} console.log(team);
+        console.log(min_score);
+        console.log(members_to_skill_level); {% endcomment %}
+        {% comment %} console.log(required_member_event_pairs); {% endcomment %}
+        // preferences
+        for (var [m, li] of Object.entries(members_to_ranked_preferences)){ // TODO: might not have to iterate through all the members
+            
+            for(var idx=0; idx<members_to_ranked_preferences.length; idx++){
+                if (team[members_to_ranked_preferences[idx]].includes(m)){
+                    total_preference_score += (idx+1)/worst_preference_amount;
+                }
+            }
+        }
+
+
+        // skills
+        for (var e in team) {
+            for (var m of team[e]) {
+                if (members_to_skill_level[m][e] !== undefined) {
+                    total_skill_score += members_to_skill_level[m][e];
+                } else {
+                    total_skill_score += min_score;
+                    {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
+                }
+                let is_required = required_member_event_pairs.some(arr => 
+                    arr.length === [m, e].length && 
+                    arr.every((value, index) => value === [m, e][index])
+                );
+                if (is_required){
+                    {% comment %} console.log("hi"); {% endcomment %}
+                    total_skill_score += 10000; // large number
+                }
+                // Log the current total_skill_score to trace the calculation
+                {% comment %} console.log(`Current total_skill_score: ${total_skill_score}`); {% endcomment %}
+            }
+        }
+        return total_skill_score * skill_vs_preferences + total_preference_score * (1-skill_vs_preferences);
+    }
+
+
+    function find_optimal_event_addition(is_necessary, new_temp_team, temp_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events){
         {% comment %} console.log("new_temp_team\n", new_temp_team, "temp_member\n", temp_member, "members_to_ranked_preferences\n", members_to_ranked_preferences, "member_member_event_pairs\n", member_member_event_pairs, "events_with_3_members\n", events_with_3_members, "worst_preference_amount\n", worst_preference_amount, "members_to_skill_level\n", members_to_skill_level, "members_to_experience\n", members_to_experience, "required_member_event_pairs\n", required_member_event_pairs, "event_types\n", event_types, "min_event_experience\n", min_event_experience, "skill_vs_preferences\n", skill_vs_preferences, "min_score\n", min_score, "build_events\n", build_events, "conflicting_events\n", conflicting_events, "max_num_of_build_events_per_member\n", max_num_of_build_events_per_member, "max_events_per_member\n", max_events_per_member, "team_size\n", team_size, "seniors\n", seniors, "available_events\n", available_events); {% endcomment %}
-        let orig_score = 0;
+        let orig_score = calculate_team_score(new_temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);;
         let best_temp_team = null;
         let best_temp_score = Number.NEGATIVE_INFINITY;
         {% comment %} console.log("looking");
         console.log(deep_copy(new_temp_team)); {% endcomment %}
         {% comment %} console.log(best_temp_score); {% endcomment %}
+        console.log("looking for new optimal event addition");
         for (let event of available_events){
             {% comment %} console.log(event); {% endcomment %}
             {% comment %} console.log(event, temp_member);
             console.log(is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)); {% endcomment %}
             if (is_valid_team_addition(event, temp_member, new_temp_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors)){
+                console.log("found valid possibility", temp_member, "in", event);
                 {% comment %} console.log("good"); {% endcomment %}
                 // add member to event if possible
                 let temp_team = deep_copy(new_temp_team);
                 temp_team[event].push(temp_member);
                 let new_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                console.log("generated_score", new_score);
+                console.log("score", new_score - orig_score);
                 {% comment %} console.log(new_score - orig_score); {% endcomment %}
                 {% comment %} console.log("adding", new_score); {% endcomment %}
                 {% comment %} console.log("Hi");
@@ -1236,11 +1261,12 @@
                     best_temp_score = new_score - orig_score;
                 }
             }else{
+                console.log("found invalid possibility", temp_member, "in", event);
                 {% comment %} console.log("trying to substitute"); {% endcomment %}
                 {% comment %} console.log("bad"); {% endcomment %}
                 // try replacing any of the existing members in the event if the new member is better than the old member at the event
                 for (let other_member of new_temp_team[event]){
-                    {% comment %} console.log("removing other member", other_member); {% endcomment %}
+                    console.log("attempting to removing other member", other_member);
                     let count = Object.keys(new_temp_team).filter(e => new_temp_team[e].includes(other_member)).length;
                     if ((count > min_events_per_member) && !(required_member_event_pairs.includes([other_member, event]))){
                         let temp_team = deep_copy(new_temp_team);
@@ -1250,6 +1276,8 @@
                             {% comment %} console.log("valid"); {% endcomment %}
                             temp_team[event].push(temp_member);
                             let new_temp_score = calculate_team_score(temp_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score);
+                            console.log("Success, generated score:", new_temp_score);
+                            console.log("score", new_temp_score - orig_temp_score);
                             {% comment %} console.log("substituting", new_temp_score); {% endcomment %}
                             {% comment %} console.log("comparison");
                             console.log(new_temp_score - orig_temp_score);
@@ -1258,7 +1286,8 @@
                                 
                                 console.log(new_temp_score, orig_temp_score);
                             } {% endcomment %}
-                            if (new_temp_score - orig_temp_score >= best_temp_score){
+                             // only replace if necessary
+                            if ((new_temp_score - orig_temp_score >= best_temp_score && is_necessary) || (new_temp_score - orig_temp_score >= best_temp_score && new_temp_score - orig_temp_score>=0)){
                                 best_temp_team = deep_copy(temp_team);
                                 best_temp_score = new_temp_score - orig_temp_score;
                             }
@@ -1281,8 +1310,8 @@ function find_optimal_member_addition(team, team_members, member_options, member
             let count = Object.keys(new_team).filter(e => new_team[e].includes(new_member)).length;
             {% comment %} let count = 0; {% endcomment %}
             let changed = true;
-            while (count < max_events_per_member){
-                let best_temp_team = deep_copy(find_optimal_event_addition(new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events));
+            while (count < min_events_per_member){
+                let best_temp_team = deep_copy(find_optimal_event_addition(true, new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events));
                 {% comment %} console.log(best_temp_team); {% endcomment %}
                 if (best_temp_team != null){
                     new_team = deep_copy(best_temp_team);
@@ -1290,6 +1319,18 @@ function find_optimal_member_addition(team, team_members, member_options, member
                 } else {
                     changed = false;
                     break;
+                }
+            }
+            if (changed){
+                while (count < max_events_per_member){
+                    let best_temp_team = deep_copy(find_optimal_event_addition(false, new_team, new_member, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, min_event_experience, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events));
+                    console.log(best_temp_team);
+                    if (best_temp_team != null){
+                        new_team = deep_copy(best_temp_team);
+                        count += 1;
+                    } else {
+                        break;
+                    }
                 }
             }
             if (changed){

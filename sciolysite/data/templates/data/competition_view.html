@@ -1,6 +1,8 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
+    <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
+
         <div class="jumbotron">
             <h1 class="display-4">{{competition.name}}</h1>
             <p class="lead">{{competition.number_of_teams_competed}} teams competed in total</p>

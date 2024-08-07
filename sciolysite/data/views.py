@@ -155,7 +155,6 @@ def teamView(request, pk):
             result.append(str(e_m_i.score))
             result.append((score_color, text_color))
             results.append(result)
-
         context = {
             "team" : team,
             "results" : results,
