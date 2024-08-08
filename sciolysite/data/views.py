@@ -15,7 +15,7 @@ import numpy as np
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("trial", "").replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
         input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
@@ -24,9 +24,9 @@ def remove_punctuation(input_string, is_event): # make it so only allow for lett
 def competitionView(request, pk):
     competition=get_object_or_404(Competition, id=pk)
     if competition.user.id==request.user.id:
-        print(competition)
+        # print(competition)
         teams = Team.objects.filter(competition=competition)
-        print(competition.name)
+        # print(competition.name)
         context = {
             "competition" : competition,
             "team_list" : teams,
@@ -37,9 +37,9 @@ def competitionView(request, pk):
 @login_required
 def competitionCreateView(request):
     form = CompetitionForm(request.POST or None)
-    print(form)
+    # print(form)
     if form.is_valid():
-        print("hi")
+        # print("hi")
         competition = Competition.objects.create(name=form.cleaned_data.get("name"),user=request.user, date=form.cleaned_data.get("date"), number_of_teams_competed=form.cleaned_data.get("number_of_teams_competed"))
         return redirect("competitionView", pk=competition.id)
     context = {
@@ -93,9 +93,9 @@ def teamCreateView(request, pk):
             if form.is_valid():
                 team_name = form.cleaned_data["name"]
                 reader = csv.reader(form.cleaned_data.get("score_data").splitlines(), delimiter=',')
-                next(reader)
+                # next(reader)
                 team = Team.objects.create(name=team_name, competition=competition)
-                for row in reader: # VERY GOOD FOR ARMITA
+                for row in reader:
                     event_name=row[0]
                     event_name = remove_punctuation(event_name, True)
                     score = int(row[4])
@@ -104,7 +104,7 @@ def teamCreateView(request, pk):
                         for m in range(1,4):
                             member_name = remove_punctuation(row[m], False)
                             if member_name!="":
-                                member = Member.objects.create(name=member_name, event_member_instance=event_member_instance)
+                                Member.objects.create(name=member_name, event_member_instance=event_member_instance)
                     else: # reached end
                         break
                 return redirect("teamView", pk=team.id)
@@ -141,7 +141,7 @@ def teamView(request, pk):
             result=[]
             result.append(e_m_i.event_name)
             member_list = Member.objects.filter(event_member_instance=e_m_i)
-            score_color=max(0,(e_m_i.score/team.competition.number_of_teams_competed)*100)
+            score_color=max(0,min(1, e_m_i.score/team.competition.number_of_teams_competed))*100
             text_color = '#FFF' if score_color<35 else "#000"
             for x in range(3):
                 if x>=len(member_list):
@@ -155,58 +155,21 @@ def teamView(request, pk):
             result.append(str(e_m_i.score))
             result.append((score_color, text_color))
             results.append(result)
+        
+        max_events_per_member = max([len(results2[m]) for m in results2])
+        for member in results2:
+            results2[member] += [('', 100.0, '#000') for i in range(max_events_per_member-len(results2[member]))]
+        
+        print(results)
+        print(results2)
         context = {
             "team" : team,
             "results" : results,
-            "results2" : results2
+            "results2" : results2,
+            "max_events_per_member" : range(1, max_events_per_member+1),
         }
         return render(request, "data/team_view.html", context)
     raise Http404
-
-# @login_required
-# def teamView(request, pk):
-#     team=get_object_or_404(Team, id=pk)
-#     if team.competition.user.id == request.user.id:
-#         results=[]
-#         event_member_instance_list = EventMemberInstance.objects.filter(team=team)
-#         results2 = {}
-#         for e_m_i in event_member_instance_list:
-#             result=[]
-#             result.append(e_m_i.event_name)
-#             member_list = Member.objects.filter(event_member_instance=e_m_i)
-#             text_color = '#FFF'
-#             if e_m_i.score<=10:
-#                 score_color = "#04ff00" # green
-#                 text_color = '#000000'
-#             elif e_m_i.score<=20:
-#                 score_color = "#ffff01" # yellow
-#                 text_color = '#000000'
-#             elif e_m_i.score<=30:
-#                 score_color = "#ff9a02" # orange
-#                 text_color = '#000000'
-#             else:
-#                 score_color = "#fe0100" # red
-#             # score_color=max(0,(e_m_i.score/team.competition.number_of_teams_competed)*100)
-#             for x in range(3):
-#                 if x>=len(member_list):
-#                     result.append("")
-#                 else:
-#                     result.append(member_list[x].name)
-#                     if member_list[x].name in results2:
-#                         results2[member_list[x].name].append((e_m_i.event_name+" ("+str(e_m_i.score)+")",score_color,text_color))
-#                     else:
-#                         results2[member_list[x].name]=[(e_m_i.event_name+" ("+str(e_m_i.score)+")",score_color,text_color)]
-#             result.append(str(e_m_i.score))
-#             result.append((score_color, text_color))
-#             results.append(result)
-
-#         context = {
-#             "team" : team,
-#             "results" : results,
-#             "results2" : results2
-#         }
-#         return render(request, "data/team_view.html", context)
-#     raise Http404
 
 
 @login_required
@@ -345,39 +308,40 @@ def skillView(request):
     for c in Competition.objects.filter(user=request.user).order_by('date'):
         emis_list = EventMemberInstance.objects.filter(team__competition=c)
         school_scores_of_competition = [x.score for x in EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
-        average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
-        competition_difficulty = average_score_of_team/c.number_of_teams_competed
-        for emi in emis_list:
-            all_events.add(emi.event_name)
-            if emi.score <= c.number_of_teams_competed:
-                # score = (average_score_of_team - emi.score) / c.number_of_teams_competed
-                score = competition_difficulty * (c.number_of_teams_competed - emi.score)/(c.number_of_teams_competed)
-                event = emi.event_name
-                members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
-                
-                for m in members:
-                    if m in members_to_experience:
-                        if event in members_to_experience[m]:
-                            members_to_experience[m][event] += 1
-                            members_to_data[m][event] += "<li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+        if len(school_scores_of_competition) != 0:
+            average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+            competition_difficulty = average_score_of_team/c.number_of_teams_competed
+            for emi in emis_list:
+                all_events.add(emi.event_name)
+                if emi.score <= c.number_of_teams_competed:
+                    # score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                    score = competition_difficulty * (c.number_of_teams_competed - emi.score)/max(1, c.number_of_teams_competed)
+                    event = emi.event_name
+                    members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
+                    
+                    for m in members:
+                        if m in members_to_experience:
+                            if event in members_to_experience[m]:
+                                members_to_experience[m][event] += 1
+                                members_to_data[m][event] += "<li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                            else:
+                                members_to_experience[m][event] = 1
+                                members_to_skill_level[m][event] = 0
+                                members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
                         else:
-                            members_to_experience[m][event] = 1
+                            members_to_experience[m] = {}
+                            members_to_data[m] = {}
+                            members_to_skill_level[m] = {}
                             members_to_skill_level[m][event] = 0
                             members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
-                    else:
-                        members_to_experience[m] = {}
-                        members_to_data[m] = {}
-                        members_to_skill_level[m] = {}
-                        members_to_skill_level[m][event] = 0
-                        members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
-                        members_to_experience[m][event] = 1
-                # total_experience = sum([members_to_experience[member][event] for member in members])
-                # total_skill = sum([members_to_skill_level[member][event] for member in members])
-                for m in members:
-                    # if total_skill != 0:
-                        # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
-                    # else:
-                    members_to_skill_level[m][event] += score
+                            members_to_experience[m][event] = 1
+                    # total_experience = sum([members_to_experience[member][event] for member in members])
+                    # total_skill = sum([members_to_skill_level[member][event] for member in members])
+                    for m in members:
+                        # if total_skill != 0:
+                            # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
+                        # else:
+                        members_to_skill_level[m][event] += score
                     # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
                     # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
     # print(members_to_skill_level)

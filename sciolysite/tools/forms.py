@@ -93,10 +93,12 @@ class ConflictCheckingForm(forms.Form):
                 conflicting_events.seek(0)  # Reset file pointer to start
                 conflicting_events_content = io.TextIOWrapper(conflicting_events.file, encoding='utf-8').read()
                 reader = csv.reader(conflicting_events_content.splitlines(), delimiter=',')
+
             except:
                 raise forms.ValidationError("This is not a valid csv file.")
             
             list_of_events = []
+            num_rows = 0
             for i, row in enumerate(reader):
                 # check if row length changes --> tampering with file?
                 if i==0:
@@ -107,8 +109,6 @@ class ConflictCheckingForm(forms.Form):
                 # check if first cell of row have event.
                 if remove_punctuation(row[0], True)=="":
                     raise forms.ValidationError("One of the rows has no event in the first cell.")
-                # if remove_punctuation(row[1], True)=="":
-                #     raise forms.ValidationError("One of the rows only has one event.")
                 # check for repeats
                 for e in row:
                     event_name = remove_punctuation(e, True)
@@ -116,6 +116,10 @@ class ConflictCheckingForm(forms.Form):
                         if event_name in list_of_events:
                             raise forms.ValidationError("Some of the events are repeated!")
                         list_of_events.append(event_name)
+                num_rows += 1
+            
+            if num_rows == 0:
+                raise forms.ValidationError("File is empty!")
 
         return conflicting_events_content
     
@@ -131,14 +135,20 @@ class ConflictCheckingForm(forms.Form):
             team_data.seek(0)  # Reset file pointer to start
             score_data_content = io.TextIOWrapper(team_data.file, encoding='utf-8').read()
             reader = csv.reader(score_data_content.splitlines(), delimiter=',')
-            next(reader)  # Skip header
+            # next(reader)  # Skip header
         except:
             raise forms.ValidationError("This is not a valid csv file.")
         done_events = []
+        num_rows = 0
         for i, row in enumerate(reader):
             # see if row length is changes --> tampering with file?
             if i==0:
                 row_length=len(row)
+                if row_length < 2:
+                    raise forms.ValidationError("This file isn't formatted correctly (found row with length 1, when minimum row length should be 2).")
+                if row_length > 4:
+                    raise forms.ValidationError("This file isn't formatted correctly (found row with length greater than 4, when maximum row length should be 4).")
+
             elif len(row)!=row_length:
                 raise forms.ValidationError("This is not a valid csv file.")
 
@@ -149,7 +159,7 @@ class ConflictCheckingForm(forms.Form):
                 if event_name in done_events:
                     raise forms.ValidationError("There are some event repeats.")
                 is_at_least_one_member_on_event = False
-                for m in range(1,4):
+                for m in range(1,min(row_length, 4)):
                     member_name = remove_punctuation(row[m], False)
                     if member_name!="":
                         is_at_least_one_member_on_event =True
@@ -158,6 +168,11 @@ class ConflictCheckingForm(forms.Form):
                 done_events.append(event_name)
             else: # reached end
                 break
+            num_rows += 1
+        
+        if num_rows == 0:
+            raise forms.ValidationError("File is empty!")
+
         return score_data_content
 
 

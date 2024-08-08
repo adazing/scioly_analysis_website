@@ -1,36 +1,42 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
-    <p>Name: {{team.name}}</p>
-    <p><a href="{% url 'teamDeleteView' pk=team.id %}">delete team</a></p>
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th scope="col">Event</th>
-          <th scope="col">Person1</th>
-          <th scope="col">Person2</th>
-          <th scope="col">Person3</th>
-          <th scope="col">Score</th>
-        </tr>
-      </thead>
-        {% for x in results %}
-        <tr scope="row">
-            {% comment %} {% for y in x%} {% endcomment %}
-            <td>{{ x.0 }}</td>
-            <td>{{ x.1 }}</td>
-            <td>{{ x.2 }}</td>
-            <td>{{ x.3 }}</td>
-            <td style="background: hsl(200,100%,{{x.5.0}}%); color: {{x.5.1}};">{{ x.4 }}</td>
-            {% comment %} {% endfor %} {% endcomment %}
-        </tr>
-        {% endfor %}
-      </table>
+    <a href="{% url 'competitionView' team.competition.id %}" class="btn btn-primary">Back</a>
 
-      <hr>
+    <h2 class="w-75 mx-auto my-4">{{team.name}}</h2>
+    <div class="card w-75 mx-auto my-4">
       <table class="table table-hover">
         <thead>
           <tr>
-            <th scope="col">Person</th>
+            <th scope="col">Event</th>
+            <th scope="col">Member 1</th>
+            <th scope="col">Member 2</th>
+            <th scope="col">Member 3</th>
+            <th scope="col">Score</th>
+          </tr>
+        </thead>
+          {% for x in results %}
+          <tr scope="row">
+              {% comment %} {% for y in x%} {% endcomment %}
+              <td>{{ x.0 }}</td>
+              <td>{{ x.1 }}</td>
+              <td>{{ x.2 }}</td>
+              <td>{{ x.3 }}</td>
+              <td style="background: hsl(200,100%,{{x.5.0}}%); color: {{x.5.1}};">{{ x.4 }}</td>
+              {% comment %} {% endfor %} {% endcomment %}
+          </tr>
+          {% endfor %}
+        </table>
+    </div>
+
+    <div class="card w-75 mx-auto my-4">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Member</th>
+            {% for i in max_events_per_member %}
+            <th scope="col">Event {{i}}</th>
+            {% endfor %}
           </tr>
         </thead>
         {% for key, value in results2.items %}
@@ -42,4 +48,5 @@
         <tr>
         {% endfor %}
       </table>
+    </div>
     {% endblock %}

@@ -8,7 +8,7 @@ import io
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("trial", "").replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
         input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
@@ -31,6 +31,11 @@ class CompetitionForm(ModelForm):
             "date" : "Date of competition",
             "number_of_teams_competed" : "Total number of teams that participated in the Competition",
         }
+    def clean_number_of_teams_competed(self):
+        number_of_teams_competed = self.cleaned_data.get("number_of_teams_competed")
+        if number_of_teams_competed<=0:
+            raise forms.ValidationError("The number of teams that competed is too low.")
+        return number_of_teams_competed
 
 class TeamForm(ModelForm):
     # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
@@ -55,9 +60,10 @@ class TeamForm(ModelForm):
             score_data.seek(0)  # Reset file pointer to start
             score_data_content = io.TextIOWrapper(score_data.file, encoding='utf-8').read()
             reader = csv.reader(score_data_content.splitlines(), delimiter=',')
-            next(reader)  # Skip header
+            # next(reader)  # Skip header
         except:
             raise forms.ValidationError("This is not a valid csv file.")
+        row_num = 0
         done_events = []
         for i, row in enumerate(reader):
             # see if row length is changes --> tampering with file?
@@ -65,6 +71,9 @@ class TeamForm(ModelForm):
                 row_length=len(row)
             elif len(row)!=row_length:
                 raise forms.ValidationError("This is not a valid csv file.")
+            
+            if row_length != 5:
+                raise forms.ValidationError("This is not the correct format. The length of each row should be 5 (event, member1, member2, member3, score).")
             
             # see if score is an int
             try:
@@ -76,18 +85,20 @@ class TeamForm(ModelForm):
             event_name=row[0]
             event_name = remove_punctuation(event_name, True)
             if event_name!="":
+                # event is repeated?
                 if event_name in done_events:
                     raise forms.ValidationError("There are some event repeats.")
-                is_at_least_one_member_on_event = False
-                for m in range(1,4):
-                    member_name = remove_punctuation(row[m], False)
-                    if member_name!="":
-                        is_at_least_one_member_on_event =True
-                if not is_at_least_one_member_on_event:
+                
+                # first member exists
+                if remove_punctuation(row[1], False) == "":
                     raise forms.ValidationError("One of the events has no people on it.")
+                    
                 done_events.append(event_name)
             else: # reached end
                 break
+            row_num += 1
+        if row_num <= 0:
+            raise forms.ValidationError("Not enough valid rows.")
         return score_data_content
 
 class DeleteConfirmationForm(forms.Form):

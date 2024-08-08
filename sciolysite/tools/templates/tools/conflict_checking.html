@@ -1,0 +1,51 @@
+{% extends 'main.html' %}
+
+{% block bodycontent %}
+<h2>Event Conflicts</h2>
+<table class="table">
+    <tbody>
+        {% for row in conflicting_events %}
+            <tr>
+                {% for event in row %}
+                <td>{{ event }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<h2>Team:</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Event</th>
+            <th scope="col">Member 1</th>
+            <th scope="col">Member 2</th>
+            <th scope="col">Member 3</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in team %}
+            <tr>
+                <th scope="row">{{ row.0 }}</th>
+                <td style="background-color:{{ row.1.color }}">{{ row.1.member }}</td>
+                <td style="background-color:{{ row.2.color }}">{{ row.2.member }}</td>
+                <td style="background-color:{{ row.3.color }}">{{ row.3.member }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if found_conflicts %}
+<h2>Found conflicts:</h2>
+{% for conflict in found_conflicts %}
+<div class="card w-75 mx-auto my-4" style="background-color:#FF6961;">
+    <div class="card-body">
+      {{conflict}}
+    </div>
+  </div>
+{% endfor %}
+{% else %}
+No conflicts found!
+{% endif %}
+{% endblock %}
