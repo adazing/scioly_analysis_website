@@ -15,19 +15,24 @@
         {% block headercontent %}
         {% endblock headercontent %}
     </head>
-    <body>
-        <style>
-            .formblock{
-                width: 70%;
-                margin-left: auto;
-                margin-right: auto;
-                margin-top: 10px;
-                margin-bottom: 10px;
-            }
-        {% block stylecontent %}
+    <style>
+        .formblock{
+            width: 70%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        body{
+            -webkit-print-color-adjust:exact !important;
+            print-color-adjust:exact !important;
+          }
+    {% block stylecontent %}
 
-        {% endblock stylecontent %}
-        </style>
+    {% endblock stylecontent %}
+    </style>
+    <body>
+
 
 
         {% include "navbar.html" %}

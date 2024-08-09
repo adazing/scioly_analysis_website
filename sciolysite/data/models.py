@@ -31,6 +31,9 @@ class EventMemberInstance(models.Model):
     score = models.PositiveIntegerField()
     def __str__(self):
         return "score of "+str(self.score)+" for "+self.event_name+" for Team "+self.team.name+" for Competition "+self.team.competition.name
+    class Meta:
+        ordering = ["event_name"]
+
     # class Meta:
     #     unique_together = ('event_name', 'team')
     
@@ -40,4 +43,6 @@ class Member(models.Model):
     event_member_instance = models.ForeignKey(EventMemberInstance, on_delete = models.CASCADE)
     def __str__(self):
         return self.name+" got a score of "+str(self.event_member_instance.score)+" on "+self.event_member_instance.event_name+" for Team "+self.event_member_instance.team.name+" for Competition "+self.event_member_instance.team.competition.name
+    class Meta:
+        ordering = ["name"]
 

@@ -51,6 +51,9 @@ class TeamForm(ModelForm):
     def clean_score_data(self, *args, **kwargs):
         score_data = self.cleaned_data.get("score_data")
         
+        if score_data.size > 1 * 1024 * 1024:  # 1MB limit
+            raise forms.ValidationError("File size must be under 1MB.")
+        
         # check if ending is csv file
         if not score_data.name.endswith(".csv"):
             raise forms.ValidationError("This is not a valid csv file.")
@@ -94,12 +97,44 @@ class TeamForm(ModelForm):
                     raise forms.ValidationError("One of the events has no people on it.")
                     
                 done_events.append(event_name)
+                row_num += 1
             else: # reached end
                 break
-            row_num += 1
         if row_num <= 0:
             raise forms.ValidationError("Not enough valid rows.")
+        elif row_num >= 50:
+            raise forms.ValidationError("Cannot have more than 50 rows.")
         return score_data_content
 
 class DeleteConfirmationForm(forms.Form):
     confirm = forms.BooleanField()
+    
+    
+class NameChangeForm(forms.Form):
+    member = forms.ChoiceField(choices = (), required=False, label="Original Member Name")
+    event = forms.ChoiceField(choices = (), required=False, label="Original Event Name")
+    name = forms.CharField(max_length = 100, required=True, label="New Name")
+    def __init__(self, *args, **kwargs):
+        member_queryset = kwargs.pop("member_queryset")
+        event_queryset = kwargs.pop("event_queryset")
+        super().__init__(*args, **kwargs)
+        self.fields["member"].choices = member_queryset
+        self.fields["event"].choices = event_queryset
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        event = self.cleaned_data.get("event")
+        event = event if event else None
+        member = self.cleaned_data.get("member")
+        member = member if member else None
+        name = self.cleaned_data.get("name")
+        if event == None and member == None:
+            raise forms.ValidationError("You must specify what you are replacing in the data.")
+        elif event != None and member != None:
+            raise forms.ValidationError("Error submitting form.")
+        elif member == None:
+            if remove_punctuation(name, True) == "":
+                raise forms.ValidationError("Replacement name is not valid.")
+        elif event == None:
+            if remove_punctuation(name, False) == "":
+                raise forms.ValidationError("Replacement name is not valid.")
+        return cleaned_data

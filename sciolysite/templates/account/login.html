@@ -1,6 +1,5 @@
 {% extends "account/base_entrance.html" %}
 {% load i18n %}
-{% comment %} {% load crispy_forms_tags %} {% endcomment %}
 {% load allauth account socialaccount %}
 {% block head_title %}
     {% trans "Sign In" %}
@@ -14,8 +13,7 @@
     <a href="{{ signup_url }}">sign up</a> first.{% endblocktrans %}
     </p>
     {% url 'account_login' as login_url %}
-    {% comment %} {% crispy %} {% endcomment %}
-    {% element form form=form method="post" action=login_url tags="entrance,login"%}
+    {% element form form=form method="post" action=login_url tags="entrance,login" %}
         {% slot body %}
             {% csrf_token %}
             {% element fields form=form unlabeled=True %}
@@ -32,6 +30,5 @@
             {% endelement %}
         {% endslot %}
     {% endelement %}
-    {% comment %} {% crispy %} {% endcomment %}
     {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
 {% endblock content %}

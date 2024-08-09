@@ -12,9 +12,9 @@ import csv
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("trial", "").replace("&", "and").replace("(3)","").replace("(*)","") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.replace("(S)","").replace("(O)","").replace("(R)","").lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 class MultipleChoiceAnyField(forms.MultipleChoiceField):
@@ -46,6 +46,7 @@ class CompetitionSettingsForm(ModelForm):
     # Member1,Member2,Event3 <--- this are a list of people who want to be together on a certain event
     # Member3,Member5,, <--- Null event means that any event counts
     
+    
     # officers=MultipleChoiceAnyField(required=False)
     # required_members=MultipleChoiceAnyField(required=False)
     # seniors=MultipleChoiceAnyField(required=False)
@@ -70,8 +71,19 @@ class CompetitionSettingsForm(ModelForm):
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
             'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5})
         }
+        
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     if 'num_total_comps' in kwargs:
+    #         num_total_comps = kwargs.pop("num_total_comps")
+    #         self.num_total_comps = num_total_comps
+    
     def clean_available_events(self, *args, **kwargs):
         available_events = self.cleaned_data.get("available_events")
+        
+        if available_events.size > 1 * 1024 * 1024:  # 1MB limit
+            raise forms.ValidationError("File size must be under 1MB.")
+
         
         # check if ending is csv file
         if not available_events.name.endswith(".csv"):
@@ -84,6 +96,8 @@ class CompetitionSettingsForm(ModelForm):
             reader = csv.reader(available_events_content.splitlines(), delimiter=',')
         except:
             raise forms.ValidationError("This is not a valid csv file.")
+        
+        row_num = 0
         list_of_events=[]
         for i, row in enumerate(reader):
             # check if row length changes --> tampering with file?
@@ -103,7 +117,13 @@ class CompetitionSettingsForm(ModelForm):
                     if event_name in list_of_events:
                         raise forms.ValidationError("Some of the events are repeated!")
                     list_of_events.append(event_name)
-
+                else:
+                    break
+            row_num += 1
+        if row_num <= 0:
+            raise forms.ValidationError("Not enough valid rows.")
+        elif row_num >= 50:
+            raise forms.ValidationError("Cannot have more than 50 rows.")
 
         return available_events_content
     
@@ -111,6 +131,10 @@ class CompetitionSettingsForm(ModelForm):
         conflicting_events = self.cleaned_data.get("conflicting_events")
         conflicting_events_content = None
         if conflicting_events is not None:
+
+            if conflicting_events.size > 1 * 1024 * 1024:  # 1MB limit
+                raise forms.ValidationError("File size must be under 1MB.")
+
             
             # check if ending is csv file
             if not conflicting_events.name.endswith(".csv"):
@@ -125,6 +149,7 @@ class CompetitionSettingsForm(ModelForm):
                 raise forms.ValidationError("This is not a valid csv file.")
             
             list_of_events = []
+            row_num = 0
             for i, row in enumerate(reader):
                 # check if row length changes --> tampering with file?
                 if i==0:
@@ -144,11 +169,22 @@ class CompetitionSettingsForm(ModelForm):
                         if event_name in list_of_events:
                             raise forms.ValidationError("Some of the events are repeated!")
                         list_of_events.append(event_name)
+                    else:
+                        break
+                row_num += 1
+            if row_num <= 0:
+                raise forms.ValidationError("Not enough valid rows.")
+            elif row_num >= 50:
+                raise forms.ValidationError("Cannot have more than 50 rows.")
 
         return conflicting_events_content
     
     def clean_member_event_preferences_data(self, *args, **kwargs):
         member_event_preferences = self.cleaned_data.get("member_event_preferences_data")
+
+        if member_event_preferences.size > 1 * 1024 * 1024:  # 1MB limit
+            raise forms.ValidationError("File size must be under 1MB.")
+
         
         # check if ending is csv file
         if not member_event_preferences.name.endswith(".csv"):
@@ -163,6 +199,7 @@ class CompetitionSettingsForm(ModelForm):
         except:
             raise forms.ValidationError("This is not a valid csv file.")
         
+        row_num = 0
         list_of_members = []
         for i, row in enumerate(reader):
             # check if row length is changes --> tampering with file?
@@ -171,20 +208,33 @@ class CompetitionSettingsForm(ModelForm):
             elif len(row)!=row_length:
                 raise forms.ValidationError("This is not a valid csv file.")
             
+            if row_length <1:
+                raise forms.ValidationError("This file needs at least one column to hold member names.")
+            
             # check if member is formatted correctly
             member_name = remove_punctuation(row[0], False)
             if member_name == "":
                 raise forms.ValidationError("One of the rows does not state the member in the first cell.")
-            # if "(O)" in row[0] and "(R)" in row[0]:
-            #     raise forms.ValidationError("(O) is mutually exclusive with (R)")
-            if member_name in list_of_members:
-                raise forms.ValidationError("There are some repeating members!")
+            else:
+                if member_name in list_of_members:
+                    raise forms.ValidationError(f"There are some repeating members! (found {member_name} twice!)")
+                list_of_members.append(member_name)
+                row_num += 1
+        if row_num <= 0:
+            raise forms.ValidationError("Not enough valid rows.")
+        elif row_num >= 200:
+            raise forms.ValidationError("Cannot have more than 200 rows.")
+
         return member_event_preferences_content
 
     def clean_member_member_event_preferences_data(self, *args, **kwargs):
         member_member_event_preferences = self.cleaned_data.get("member_member_event_preferences_data")
         member_member_event_preferences_content = None
         if member_member_event_preferences is not None:
+
+            if member_member_event_preferences.size > 1 * 1024 * 1024:  # 1MB limit
+                raise forms.ValidationError("File size must be under 1MB.")
+
             
             # check if ending is csv file
             if not member_member_event_preferences.name.endswith(".csv"):
@@ -200,6 +250,7 @@ class CompetitionSettingsForm(ModelForm):
                 raise forms.ValidationError("This is not a valid csv file.")
             
             # list_of_members = []
+            row_num = 0
             for i, row in enumerate(reader):
                 # check if row length is changes --> tampering with file?
                 if i==0:
@@ -207,6 +258,11 @@ class CompetitionSettingsForm(ModelForm):
                 elif len(row)!=row_length:
                     raise forms.ValidationError("This is not a valid csv file.")
                 
+                if row_length <2:
+                    raise forms.ValidationError("The max number of cells in a row should not be less than 2.")
+                elif row_length > 3:
+                    raise forms.ValidationError("The max number of cells in a row should not be greater than 3.")
+
                 # check if member1 is formatted correctly
                 member1_name = remove_punctuation(row[0], False)
                 if member1_name == "":
@@ -216,8 +272,17 @@ class CompetitionSettingsForm(ModelForm):
                 member2_name = remove_punctuation(row[1], False)
                 if member2_name == "":
                     raise forms.ValidationError("One of the rows does not state the member in the second cell.")
-
+                row_num += 1
+            if row_num <= 0:
+                raise forms.ValidationError("Not enough valid rows.")
+            elif row_num >= 100:
+                raise forms.ValidationError("Cannot have more than 100 rows.")
         return member_member_event_preferences_content
+    
+    # def clean(self):
+    #     cleaned_data = super().clean()
+    #     if self.num_total_comps > 1000:
+    #         raise forms.ValidationError("You have reached the maximum number of ")
 
 
 class TeamForm(ModelForm):

@@ -11,4 +11,5 @@ urlpatterns = [
     path('team-delete/<str:pk>/', views.teamDeleteView, name="teamDeleteView"),
     path('', views.competitionListView, name="competitionListView"),
     path('skills/', views.skillView, name="skillView"),
+    path('name-change/', views.nameChange, name="nameChange"),
 ]

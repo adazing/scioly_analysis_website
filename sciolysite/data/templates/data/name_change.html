@@ -1,0 +1,73 @@
+{% extends 'main.html' %}
+{% load crispy_forms_tags %}
+
+{% block bodycontent %}
+    <div class="w-75 mx-auto my-4">Accidentally called a member or an event a by a different name and need to replace the instance of the name in all the data?</div>
+    <div class="formblock">
+        <form method="POST">
+            {% csrf_token %}
+            
+            <!-- Dropdown for user to choose whether to change a member name or an event name -->
+            <div class="form-group">
+                <label for="change_type">What would you like to change?</label>
+                <select id="change_type" class="form-control">
+                    <option value="">Select...</option>
+                    <option value="member">Member Name</option>
+                    <option value="event">Event Name</option>
+                </select>
+            </div>
+            
+            <!-- Member input, initially hidden -->
+            <div id="member_input" class="form-group" style="display:none;">
+                {{ form.member|as_crispy_field }}
+            </div>
+            
+            <!-- Event input, initially hidden -->
+            <div id="event_input" class="form-group" style="display:none;">
+                {{ form.event|as_crispy_field }}
+            </div>
+            
+            <!-- Name input, initially hidden -->
+            <div id="name_input" class="form-group" style="display:none;">
+                {{ form.name|as_crispy_field }}
+            </div>
+
+            <input type="submit" value="Save" class="btn btn-primary">
+        </form>
+    </div>
+{% endblock %}
+
+{% block scriptcontent %}
+document.addEventListener('DOMContentLoaded', function() {
+    var changeTypeSelect = document.getElementById('change_type');
+    var memberInput = document.getElementById('member_input');
+    var eventInput = document.getElementById('event_input');
+    var nameInput = document.getElementById('name_input');
+    var memberField = document.querySelector('[name="member"]');
+    var eventField = document.querySelector('[name="event"]');
+    var nameField = document.querySelector('[name="name"]');
+
+    changeTypeSelect.addEventListener('change', function() {
+        var selectedValue = this.value;
+
+        // Reset all inputs initially
+        memberField.value = '';
+        eventField.value = '';
+        nameField.value = '';
+
+        // Hide all inputs initially
+        memberInput.style.display = 'none';
+        eventInput.style.display = 'none';
+        nameInput.style.display = 'none';
+
+        // Show the relevant inputs based on selection
+        if (selectedValue === 'member') {
+            memberInput.style.display = 'block';
+            nameInput.style.display = 'block';
+        } else if (selectedValue === 'event') {
+            eventInput.style.display = 'block';
+            nameInput.style.display = 'block';
+        }
+    });
+});
+{% endblock %}

@@ -310,7 +310,7 @@ def skillView(request):
         school_scores_of_competition = [x.score for x in EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
         if len(school_scores_of_competition) != 0:
             average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
-            competition_difficulty = average_score_of_team/c.number_of_teams_competed
+            competition_difficulty = average_score_of_team/max(1, c.number_of_teams_competed)
             for emi in emis_list:
                 all_events.add(emi.event_name)
                 if emi.score <= c.number_of_teams_competed:
@@ -424,3 +424,34 @@ def skillView(request):
         "table_data2":table_data2,
     }
     return render(request, "data/skill_view.html", context)
+
+
+@login_required
+def nameChange(request):
+    member_queryset = Member.objects.values_list('name', flat=True).distinct()
+    member_queryset = tuple([('', "-----")] + [(m, m) for m in member_queryset])
+    event_queryset = EventMemberInstance.objects.values_list('event_name', flat=True).distinct()
+    event_queryset = tuple([('', "-----")] + [(e, e) for e in event_queryset])
+
+    form = NameChangeForm(request.POST or None, member_queryset=member_queryset, event_queryset=event_queryset)
+    
+    if request.method == "POST":
+        if form.is_valid():
+            member = form.cleaned_data.get("member")
+            event = form.cleaned_data.get("event")
+            name = form.cleaned_data.get("name")
+
+            if member:  # Update member name
+                new_name = remove_punctuation(name, False)
+                Member.objects.filter(name=member).update(name=new_name)
+            
+            if event:  # Update event name
+                new_name = remove_punctuation(name, True)
+                EventMemberInstance.objects.filter(event_name=event).update(event_name=new_name)
+
+            return redirect("competitionListView")
+    
+    context = {
+        "form": form,
+    }
+    return render(request, "data/name_change.html", context)
