@@ -15,7 +15,7 @@ import numpy as np
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
     else:
         input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()

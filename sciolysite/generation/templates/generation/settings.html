@@ -9,6 +9,7 @@
                 {% csrf_token %}
                 {{ form|crispy }}
                 <br>
+
                 <div class="accordion" id="accordionExample">
                     <div class="accordion-item">
                       <h2 class="accordion-header" id="headingOne">
@@ -28,7 +29,6 @@
                                 <li>Each row corresponds to a group of events that are similar.</li>
                                 <li>All events mentioned should have the same name as the event names you used for your past invitational data.</li>
                                 <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
-                                <li>There is no limit to row length or row number.</li>
                                 <li>Any event with three members (default is two) should be indicated as such with a "(3)" next to the name.</li>
                                 <li>Any build event should be indicated as such with a "(B)" next to the name.</li>
                                 <li>There should be no other information in the sheet.</li>

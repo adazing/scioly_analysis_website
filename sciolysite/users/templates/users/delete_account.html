@@ -1,0 +1,18 @@
+{% extends "main.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Delete Account{% endblock %}
+
+{% block bodycontent %}
+
+<div class="formblock">
+<h2>Delete Account</h2>
+<p>Are you sure you want to delete your account? This action is irreversible and deletes any data associated with your account.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary">Delete user</button>
+  </form>
+</div>
+
+{% endblock %}

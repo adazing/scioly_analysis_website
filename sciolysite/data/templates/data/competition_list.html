@@ -1,8 +1,6 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
-        <div class="card w-75 mx-auto my-4"><a href="{% url 'skillView' %}" class="btn btn-secondary">View Skills Data</a></div>
-        <div class="card w-75 mx-auto my-4"><a href="{% url 'nameChange' %}" class="btn btn-secondary">Replace Names</a></div>
         <div class="card w-75 mx-auto my-4"><a href="{% url 'competitionCreateView' %}" class="btn btn-primary">Add Competition Data</a></div>
 
         {% for c in competition_list %}

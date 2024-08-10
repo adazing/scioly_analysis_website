@@ -43,7 +43,8 @@ SECRET_KEY = 'django-insecure-a715^s%+en-fpm-b1li#wg@esnt*d+16xnchuprkho@hk$=dw7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
 
 MEDIA_URL='/team_data/'
 MEDIA_ROOT=BASE_DIR / "team_data"
@@ -70,9 +71,9 @@ INSTALLED_APPS = [
     
     #allauth
 
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount',
 
 
 ]
@@ -88,7 +89,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     # Add the account middleware:
-    "allauth.account.middleware.AccountMiddleware",
+    # "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = 'sciolysite.urls'
@@ -116,7 +117,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 
     # `allauth` specific authentication methods, such as login by email
-    'allauth.account.auth_backends.AuthenticationBackend',
+    # 'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 WSGI_APPLICATION = 'sciolysite.wsgi.application'
@@ -186,7 +187,13 @@ REST_FRAMEWORK = {
     ]
 }
 
+# crispy forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
-
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+LOGIN_REDIRECT_URL = "/"
+
+LOGIN_URL="/login/"
+
+LOGIN_REDIRECT_URL="/"

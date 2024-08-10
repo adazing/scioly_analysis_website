@@ -13,7 +13,7 @@ class GeneratedCompetitionSettings(models.Model):
     max_events_per_member = models.PositiveIntegerField()
     min_events_per_member = models.PositiveIntegerField()
     # max_number_of_experimental_people = models.PositiveIntegerField() # rename to number_of_new_members
-    min_event_experience = models.PositiveIntegerField()
+    # min_event_experience = models.PositiveIntegerField()
     skill_vs_preferences = models.FloatField()
     max_num_of_build_events_per_member = models.PositiveIntegerField(default=2)
     #skill vs preference score preferences
@@ -74,7 +74,8 @@ class AvailableMember(models.Model):
     def __str__(self):
         is_senior=" (senior)" if self.is_senior else ""
         # is_officer = " (officer)" if self.is_officer else ""
-        return self.name+is_senior
+        # return self.name+is_senior
+        return self.generated_competition_settings.name+" "+self.name+is_senior
     class Meta:
         ordering = ["name"]
 

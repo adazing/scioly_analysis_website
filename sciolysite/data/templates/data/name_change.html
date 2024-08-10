@@ -2,7 +2,7 @@
 {% load crispy_forms_tags %}
 
 {% block bodycontent %}
-    <div class="w-75 mx-auto my-4">Accidentally called a member or an event a by a different name and need to replace the instance of the name in all the data?</div>
+    <div class="w-75 mx-auto my-4">Accidentally called a member or an event a by a different name and need to replace the instance of the name in all the data? You can do so here, but keep in mind that this action is irreversible and changes the data directly.</div>
     <div class="formblock">
         <form method="POST">
             {% csrf_token %}

@@ -1,0 +1,16 @@
+{% extends 'main.html' %}
+{% load crispy_forms_tags %}
+
+{% block bodycontent %}
+<div class="formblock">
+    {% if user.is_authenticated %}
+    <h4>You are already logged in. Would you like to <a href="{% url 'logoutView' %}">log out?</a> </h4>
+    {% else %}
+    <form method="POST">
+        {% csrf_token %}
+        {{form|crispy}}
+        <button type="submit" class="btn btn-primary">Log In</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

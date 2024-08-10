@@ -1,13 +1,81 @@
 {% extends 'main.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 
     {% block bodycontent %}
         <div class="formblock">
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ form|crispy}}
-                <input type="submit" value="OK" class="btn btn-primary">
-            </form>
+
+            <div class="accordion" id="accordionExample">
+
+                <div class="accordion" id="accordionExample">
+                    <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            Example Creation of Team Assignment CSV Data Using Google Sheets:
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <p><b>What is it?</b></p>
+                            <p>This file specifies a team that participated and what their event ranks were.</p>
+                            
+                            <p><b>Step 1:</b> Make data. Requirements:</p>
+                            <ul>
+                                <li>All events must be stated in the A column and should be strings. Only letters will be taken into account, so "&" will be changed to "and." Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other competitions.</li>
+                                <li>All the members present in each event are stated in columns B through D, with the members on the event being in the same row as the event. There must be at least one member in each stated event. Only the member's names should be shown as strings, and only roman alphabet letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the member is the same as in all the other competitions.</li>
+                                <li>The events do not need to be in any order, and there is no max number of events.</li>
+                                <li>Colors/formatting does not matter.</li>
+                            </ul>
+                            <img class="rounded mx-auto d-block w-75" style="" src="{% static 'images/team_data.png' %}"> 
+                            
+                            <p><b>Step 2:</b> Download CSV data.</p>
+                            <p>(If you are using Google Sheets)</p>
+                            <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Creation of Conflicting Events CSV Data Using Google Sheets (OPTIONAL):
+
+                    </button>
+                    </h2>
+                    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <p><b>What is it?</b></p>
+                        <p>This file describes any events that might conflict at a competition (so no member can do two conflicting events at the same time).</p>
+
+                        <p><b>Step 1:</b> Make data. Requirements:</p>
+                        <ul>
+                            <li>There is no header.</li>
+                            <li>Not all events need to be mentioned, but there should be no repeats of the mentioned events.</li>
+                            <li>Each row corresponds to a group of events that are in the same timeblock. Therefore, no one can do both of the events at the same time.</li>
+                            <li>Each row is assumed to end as soon as it reaches an empty cell. Therefore, all events on each row should be stated in the first cell and leave no blank cells between until the end is reached.</li>
+                            <li>There is no limit to row length or row number.</li>
+                            <li>There should be no other information in the sheet.</li>
+                        </ul>
+                        <br>
+                        <img class="rounded mx-auto d-block w-100" style="" src="{% static 'images/conflicting_events.png' %}"> 
+                        
+                        <br>
+                        
+                        <b>Step 2:</b> Download CSV data.<br>
+                        <kbd>File -> Download -> Comma Separated Values (.csv)</kbd>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <input type="submit" value="OK" class="btn btn-primary">
+        </form>
+
         </div>
     {% endblock %}
 

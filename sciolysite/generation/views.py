@@ -26,7 +26,7 @@ import json
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
     else:
         input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
@@ -57,7 +57,9 @@ def conflicting_events_reader(conflicting_events, generated_competition_settings
             event_name=remove_punctuation(e, True)
             # check if event exists
             if event_name!="":
-                event_exists = AvailableEvent.objects.filter(name=event_name).exists()
+                event_exists = AvailableEvent.objects.filter(name=event_name, generated_competition_settings=generated_competition_settings).exists()
+                # print(event_exists)
+                # print(AvailableEvent.objects.filter(name=event_name, generated_competition_settings=generated_competition_settings))
                 if event_exists:
                     event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings)
                     event.conflict = conflict
@@ -71,6 +73,7 @@ def member_event_preferences_reader(member_event_preferences_data, generated_com
     for row in reader:
         # print(row)
         member_name=row[0]
+        # print(member_name)
         is_senior = "(S)" in member_name
         member_name=remove_punctuation(member_name, False)
         member = AvailableMember.objects.create(generated_competition_settings=generated_competition_settings, name=member_name, is_senior=is_senior)
@@ -80,7 +83,7 @@ def member_event_preferences_reader(member_event_preferences_data, generated_com
             event_name = remove_punctuation(event, True)
             if event_name!="":
                 # is_required = "(*)" in event_name
-                event_exists = AvailableEvent.objects.filter(name=event_name).exists()
+                event_exists = AvailableEvent.objects.filter(name=event_name, generated_competition_settings=generated_competition_settings).exists()
                 if event_exists:
                     e_idx += 1
                     event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings)
@@ -127,7 +130,7 @@ def competitionSettingsFormView(request):
         if form.is_valid():
             # print("hi")
             # make initial settings constants
-            generated_competition_settings = GeneratedCompetitionSettings.objects.create(user=request.user, name = form.cleaned_data.get("name"), notes = form.cleaned_data.get("notes"), max_events_per_member = form.cleaned_data.get("max_events_per_member"), min_events_per_member = form.cleaned_data.get("min_events_per_member"), skill_vs_preferences = form.cleaned_data.get("skill_vs_preferences"), min_event_experience=form.cleaned_data.get("min_event_experience"), max_num_of_build_events_per_member=form.cleaned_data.get("max_num_of_build_events_per_member"))
+            generated_competition_settings = GeneratedCompetitionSettings.objects.create(user=request.user, name = form.cleaned_data.get("name"), notes = form.cleaned_data.get("notes"), max_events_per_member = form.cleaned_data.get("max_events_per_member"), min_events_per_member = form.cleaned_data.get("min_events_per_member"), skill_vs_preferences = form.cleaned_data.get("skill_vs_preferences"), max_num_of_build_events_per_member=form.cleaned_data.get("max_num_of_build_events_per_member"))
             
             #analyze files
             available_events = form.cleaned_data["available_events"]
@@ -176,7 +179,6 @@ def generatedCompetitionSettingsEdit(request, pk):
                 generated_competition_settings.max_events_per_member = form.cleaned_data.get("max_events_per_member")
                 generated_competition_settings.min_events_per_member = form.cleaned_data.get("min_events_per_member")
                 generated_competition_settings.skill_vs_preferences = form.cleaned_data.get("skill_vs_preferences")
-                generated_competition_settings.min_event_experience = form.cleaned_data.get("min_event_experience")
                 generated_competition_settings.max_num_of_build_events_per_member = form.cleaned_data.get("max_num_of_build_events_per_member")
                 generated_competition_settings.save()
                 
@@ -185,6 +187,9 @@ def generatedCompetitionSettingsEdit(request, pk):
                 AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings).delete()
                 EventType.objects.filter(generated_competition_settings = generated_competition_settings).delete()
                 ConflictingEvents.objects.filter(generated_competition_settings = generated_competition_settings).delete()
+
+                # print(AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings))
+
                 
                 #analyze files
                 available_events = form.cleaned_data["available_events"]
@@ -205,6 +210,8 @@ def generatedCompetitionSettingsEdit(request, pk):
                 # read member_member_event_preferences_data
                 if member_member_event_preferences_data is not None:
                     member_member_event_preferences_reader(member_member_event_preferences_data, generated_competition_settings)
+                
+                # print(AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings))
                 
                 return redirect("generatedCompetitionSettingsView", pk=generated_competition_settings.id)
                         
@@ -459,13 +466,10 @@ def frontend_generate(request, pk):
         members_to_experience=dict()
         members_to_skill_level=dict()   
                 
-        members_to_skill_level = dict()
-        members_to_experience = dict()
-
         for c in data.models.Competition.objects.filter(user=request.user).order_by('date'):
             emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c)
             school_scores_of_competition = [x.score for x in data.models.EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
-            if len(school_scores_of_competition)>=0:
+            if len(school_scores_of_competition)>0:
                 average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
                 competition_difficulty = average_score_of_team/max(1, c.number_of_teams_competed)
                 for emi in emis_list:
@@ -475,19 +479,20 @@ def frontend_generate(request, pk):
                         members = [m.name for m in data.models.Member.objects.filter(event_member_instance = emi)]
                         
                         for m in members:
-                            if m in members_to_experience:
-                                if event in members_to_experience[m]:
-                                    members_to_experience[m][event] += 1
+                            if m in available_members and event in available_events:
+                                if m in members_to_experience:
+                                    if event in members_to_experience[m]:
+                                        members_to_experience[m][event] += 1
+                                    else:
+                                        members_to_experience[m][event] = 1
+                                        members_to_skill_level[m][event] = 0
                                 else:
-                                    members_to_experience[m][event] = 1
+                                    members_to_experience[m] = {}
+                                    members_to_skill_level[m] = {}
                                     members_to_skill_level[m][event] = 0
-                            else:
-                                members_to_experience[m] = {}
-                                members_to_skill_level[m] = {}
-                                members_to_skill_level[m][event] = 0
-                                members_to_experience[m][event] = 1
-                        for m in members:
-                            members_to_skill_level[m][event] += score
+                                    members_to_experience[m][event] = 1
+                        # for m in members:
+                                members_to_skill_level[m][event] += score
 
         #shuffle dictionary to ensure randomness if two or more people have skills are the same
         keys = list(members_to_skill_level.keys())

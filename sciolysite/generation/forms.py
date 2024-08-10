@@ -12,7 +12,7 @@ import csv
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
     else:
         input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
@@ -61,7 +61,6 @@ class CompetitionSettingsForm(ModelForm):
             "max_events_per_member",
             "min_events_per_member",
             "skill_vs_preferences",
-            "min_event_experience",
             "max_num_of_build_events_per_member",
         ]
         labels= {
@@ -71,12 +70,23 @@ class CompetitionSettingsForm(ModelForm):
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
             'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5})
         }
-        
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     if 'num_total_comps' in kwargs:
-    #         num_total_comps = kwargs.pop("num_total_comps")
-    #         self.num_total_comps = num_total_comps
+      
+    # def clean_min_events_per_member(self):
+    #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
+    def clean_skill_vs_preferences(self):
+        skill_vs_preferences = self.cleaned_data.get("skill_vs_preferences")
+        if skill_vs_preferences>1 or skill_vs_preferences<0:
+            raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
+    def clean_min_events_per_member(self):
+        min_events_per_member = self.cleaned_data.get("min_events_per_member")
+        if min_events_per_member<1:
+            raise forms.ValidationError("The minimum events per member cannot be smaller than 1.")
+    def clean(self):
+        max_events_per_member = self.cleaned_data.get("max_events_per_member")
+        min_events_per_member = self.cleaned_data.get("min_events_per_member")
+        if max_events_per_member < min_events_per_member:
+            raise forms.ValidationError("The maximum events per member cannot be smaller than the minimum events per member.")
+        return self.cleaned_data
     
     def clean_available_events(self, *args, **kwargs):
         available_events = self.cleaned_data.get("available_events")
@@ -300,6 +310,7 @@ class TeamForm(ModelForm):
             "team_size",
         ]
     def __init__(self, *args, **kwargs):
+        
         # queryset = kwargs.pop("queryset")
         super().__init__(*args, **kwargs)
         # self.fields["required_members"].queryset = queryset

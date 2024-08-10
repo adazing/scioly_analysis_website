@@ -21,7 +21,7 @@
                 <h5 class="card-header">{{t.name}}</h5>
                 <div class="card-body">
                     <p class="card-text">{{t.notes}}</p>
-                    <p class="card-text">{{t.team_size}}</p>
+                    <p class="card-text">Size: {{t.team_size}}</p>
                     <a href="{% url 'generatedTeamEditView' pk=t.id %}" class="btn btn-primary">Edit Settings</a>
                     <a href="{% url 'editRequirementsView' pk=t.id %}" class="btn btn-secondary">Edit Requirements</a>
                     <a href="{% url 'generatedTeamDeleteView' pk=t.id %}" class="btn btn-danger">Delete</a>

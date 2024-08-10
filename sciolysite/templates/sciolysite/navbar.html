@@ -1,13 +1,20 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">SciolyAnalysis</a>
+      <a class="navbar-brand" href="/">SciolyAnalysis</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'competitionListView' %}">Data</a>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url 'competitionListView' %}" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Data
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="{% url 'competitionListView' %}">Data</a></li>
+              <li><a class="dropdown-item" href="{% url 'nameChange' %}">Change Names</a></li>
+              <li><a class="dropdown-item" href="{% url 'skillView' %}">Skill View</a></li>
+            </ul>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="{% url 'generatedCompetitionsListView' %}">Generation</a>
@@ -20,17 +27,30 @@
               <li><a class="dropdown-item" href="{% url 'ConflictCheckingView' %}">Conflict Checking</a></li>
             </ul>
           </li>
+          {% if user.is_authenticated %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Dropdown
+            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {{user.username}}
             </a>
             <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-              <li><a class="dropdown-item" href="#">Action</a></li>
-              <li><a class="dropdown-item" href="#">Another action</a></li>
+              <li><a class="dropdown-item" href="{% url 'passwordChangeView' %}">Change Password</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="#">Something else here</a></li>
+              <li><a class="dropdown-item" href="{% url 'logoutView' %}">Logout</a></li>
+              <li><a class="dropdown-item" href="{% url 'deleteAccountView' %}">Delete Account</a></li>
             </ul>
           </li>
+          {% else %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Account
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="{% url 'loginView' %}">Login</a></li>
+              <li><a class="dropdown-item" href="{% url 'signupView' %}">Sign Up</a></li>
+            </ul>
+          </li>
+          {% endif %}
+
         </ul>
       </div>
     </div>
