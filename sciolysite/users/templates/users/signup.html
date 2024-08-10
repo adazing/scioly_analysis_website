@@ -12,6 +12,7 @@
   <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
+    <p>By signing up, you agree to our <a href="{% url 'privacyPolicy' %}">Privacy Policy</a>, <a href="{% url 'termsOfService' %}">Terms of Use</a>, and that you are at least 14 years old.</p>
     <button type="submit" class="btn btn-primary">Sign Up</button>
   </form>
   {% endif %}

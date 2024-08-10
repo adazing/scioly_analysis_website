@@ -15,9 +15,9 @@ import numpy as np
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 @login_required
@@ -395,8 +395,8 @@ def skillView(request):
     #     for e in members_to_skill_level[m]:
     #         members_to_skill_level[m][e] = members_to_skill_level[m][e]/members_to_experience[m][e]
     
-    min_score = min([min(members_to_skill_level[m].values()) for m in members_to_skill_level])
-    max_score = max([max(members_to_skill_level[m].values()) for m in members_to_skill_level])
+    min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
+    max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
     
     for m in members_to_experience:
         for e in members_to_experience[m]:
@@ -405,11 +405,11 @@ def skillView(request):
 
     all_events = sorted(list(all_events))
     table_columns = ["Name"]+all_events
-    max_xp = max([max(members_to_experience[m].values()) for m in members_to_experience])
+    max_xp = max([max(members_to_experience[m].values(), default=0) for m in members_to_experience], default=0)
     
     table_info_data = [["".join([members_to_data[m][e]+"</ul>" for e in members_to_skill_level[m]])]+[members_to_data[m][e]+"</ul>" if e in members_to_skill_level[m] else "<p>No Data</p>" for e in all_events] for m in members_to_skill_level]
     # print(members_to_skill_level)
-    table_data = [[m]+[(members_to_skill_level[m][e]-min_score)*100/(max_score-min_score) if e in members_to_skill_level[m] else 0 for e in all_events] for m in members_to_skill_level]
+    table_data = [[m]+[round((members_to_skill_level[m][e]-min_score)*100/(max_score-min_score), 2) if e in members_to_skill_level[m] else 0 for e in all_events] for m in members_to_skill_level]
     table_data = [table_data, table_info_data]
     table_data = "var tabledata = ["+"".join(["{"+"".join(['"'+str(table_columns[i])+'":'+str(table_data[0][t][i])+','+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' if i!=0 else '"'+str(table_columns[i])+'":"'+str(table_data[0][t][i])+'",'+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' for i in range(len(table_columns))])+"}," for t in range(len(table_data[0]))])+"];"
 

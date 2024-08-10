@@ -4,34 +4,22 @@
     <div class="container-fluid py-4">
         <div class="row gy-4 gx-5">
             <div class="col-lg-4 col-md-6">
-                <h5 class="h1 text-white">Synctio</h5>
+                <h5 class="h1 text-white">SciolyAnalysis</h5>
                 <p class="small">Made By Students, For Students</p>
-                <p class="small mb-0"><a href="#">Synctio.com</a></p>
+                <p class="small mb-0"><a href="#">SciolyAnalysis.com</a></p>
             </div>
             <div class="col-lg-2 col-md-6">
                 <h5 class="text-white mb-3">Contact</h5>
                 <ul class="list-unstyled">
-                    <li >Phone Number: </li>
-                    <li>Email:</li>
+                    <li>Email:<a href="mailto:adalangford.dev@gmail.com">adalangford.dev@gmail.com.</a></li>
                 </ul>
             </div>
             <div class="col-lg-2 col-md-6">
                 <h5 class="text-white mb-3">Info</h5>
                 <ul class="list-unstyled">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="#">Get started</a></li>
-                    <li><a href="#">FAQ</a></li>
-                    <li><a href="#">Terms Of Service</a></li>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Cookie Policy</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-4 col-md-6">
-                <h5 class="text-white mb-3">Donate</h5>
-                <ul class="list-unstyled">
-                <li><a href="#">Donate</a></li>
-                <li><p class="small">Maintaining this website is not free, so we appreciate any funds to keep this website available to everyone.</p></li>
-                <li><p class="smal">Learn more <a href="#">here</a>.</p></li>
+                    <li><a href="{% url 'termsOfService' %}">Terms Of Service</a></li>
+                    <li><a href="{% url 'privacyPolicy' %}">Privacy Policy</a></li>
+                    <li><a href="{% url 'disclaimers' %}">Disclaimers</a></li>
                 </ul>
             </div>
         </div>

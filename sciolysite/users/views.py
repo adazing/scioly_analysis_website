@@ -20,6 +20,12 @@ def home(request):
 def privacyPolicy(request):
     return render(request, 'users/privacy_policy.html')
 
+def termsOfService(request):
+    return render(request, "users/terms_of_service.html")
+
+def disclaimers(request):
+    return render(request, "users/disclaimers.html")
+
 def signupView(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)

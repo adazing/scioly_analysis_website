@@ -8,9 +8,9 @@ import io
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 
@@ -82,8 +82,11 @@ class TeamForm(ModelForm):
             try:
                 score = int(row[4].strip())
             except:
-                raise forms.ValidationError("Some of the scores are non-integer values.")
-            
+                raise forms.ValidationError("Some of the scores/ranks are non-integer values.")
+
+            if score<1:
+                raise forms.ValidationError("Some of the scores/ranks are less than 1.")
+
             # if event_name is blank, means reached end of file
             event_name=row[0]
             event_name = remove_punctuation(event_name, True)

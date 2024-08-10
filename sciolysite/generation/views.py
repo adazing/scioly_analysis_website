@@ -26,9 +26,9 @@ import json
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.lower().replace("&", "and").replace("(B)", "").replace("(3)", "") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 def available_events_reader(available_events, generated_competition_settings):
@@ -463,8 +463,8 @@ def frontend_generate(request, pk):
         members_to_ranked_preferences = {m:[p[0] for p in sorted(members_to_ranked_preferences[m], key= lambda x:x[1])] for m in members_to_ranked_preferences}
                 
         #review previous competition data
-        members_to_experience=dict()
-        members_to_skill_level=dict()   
+        members_to_experience={m:{e:0 for e in available_events} for m in available_members}
+        members_to_skill_level={m:{e:0 for e in available_events} for m in available_members}
                 
         for c in data.models.Competition.objects.filter(user=request.user).order_by('date'):
             emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c)
@@ -480,18 +480,7 @@ def frontend_generate(request, pk):
                         
                         for m in members:
                             if m in available_members and event in available_events:
-                                if m in members_to_experience:
-                                    if event in members_to_experience[m]:
-                                        members_to_experience[m][event] += 1
-                                    else:
-                                        members_to_experience[m][event] = 1
-                                        members_to_skill_level[m][event] = 0
-                                else:
-                                    members_to_experience[m] = {}
-                                    members_to_skill_level[m] = {}
-                                    members_to_skill_level[m][event] = 0
-                                    members_to_experience[m][event] = 1
-                        # for m in members:
+                                members_to_experience[m][event] += 1
                                 members_to_skill_level[m][event] += score
 
         #shuffle dictionary to ensure randomness if two or more people have skills are the same
@@ -509,8 +498,8 @@ def frontend_generate(request, pk):
                     new_member_to_skill_level[e] = members_to_skill_level[m][e]
             members_to_skill_level[m] = new_member_to_skill_level
         
-        min_score = min([min(members_to_skill_level[m].values(), default = float('inf')) for m in members_to_skill_level])
-        max_score = max([max(members_to_skill_level[m].values(), default = float('-inf')) for m in members_to_skill_level])
+        min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
+        max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
 
         print("min_score", min_score)
 
@@ -520,7 +509,10 @@ def frontend_generate(request, pk):
                 if e not in members_to_skill_level[m]:
                     members_to_skill_level[m][e] = 0
                 else:
-                    members_to_skill_level[m][e] = (members_to_skill_level[m][e] - min_score) / (max_score - min_score)
+                    if max_score - min_score != 0:
+                        members_to_skill_level[m][e] = (members_to_skill_level[m][e] - min_score) / (max_score - min_score)
+                    else:
+                        members_to_skill_level[m][e] = 0
             members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
         
         
@@ -532,6 +524,7 @@ def frontend_generate(request, pk):
             "required_members" : required_members,
             "seniors" : seniors,
             "teams" : [t.team_size for t in teams],
+            "team_names" : [t.name for t in teams],
             "members_to_ranked_preferences" : members_to_ranked_preferences,
             "member_member_event_pairs" : json.dumps(member_member_event_pairs),
             "generated_competition_settings" : generated_competition_settings,
