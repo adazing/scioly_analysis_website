@@ -10,6 +10,9 @@ from django.http import Http404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import numpy as np
+import math
+from scipy.optimize import minimize
+
 
 # TODO: MAKE SURE THAT ONLY ALPHABET LETTERS ARE ALLOWED (NO PUNCTUATION THAT CAN CAUSE XSS ATTACKS)
 def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
@@ -181,6 +184,189 @@ def competitionListView(request):
     return render(request, "data/competition_list.html", context)
 
 @login_required
+def skillView2(request):
+    # process and store emis for easy calculations
+    competition_list = Competition.objects.filter(user=request.user).order_by('date')
+    competition_to_emis = {}
+    for c in competition_list:
+        emis_list = EventMemberInstance.objects.filter(team__competition=c)
+        results_dict = dict()
+        for emi in emis_list:
+            members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
+            for m in members:
+                if emi.score < c.number_of_teams_competed:
+                    results_dict[(emi.event_name, m)] = emi.score
+        if results_dict:
+            competition_to_emis[c] = results_dict
+    
+    competition_list = [c for c in competition_to_emis]
+    num_competitions = len(competition_list)
+    
+    def custom_loss(params):
+        learning_rate = abs(params[-2])
+        skill_no_exp = abs(params[-1])
+        total_loss = 0
+        num_valid_competitions = 0
+        for c1 in range(num_competitions): # comp to leave out
+            total_comp_loss = 0
+            total_num_repeats = 0
+            em_to_exp = dict()
+            for c2 in range(num_competitions): # all other comps
+                competition = competition_list[c2]
+                if c1 != c2:
+                    for event, member in competition_to_emis[competition]:
+                        rank = competition_to_emis[competition][(event, member)]
+                        # weight = max(params[c2*2], 0)
+                        weight = abs(params[c2*2])
+                        # bias = params[c2*2+1]
+                        bias = 0
+                        score = weight*(1-rank/competition.number_of_teams_competed) + bias
+                        if (event, member) in em_to_exp:
+                            # score -= learning_rate*math.log(len(em_to_exp[(event, member)]))
+                            em_to_exp[(event, member)].append(score)
+                        else:
+                            em_to_exp[(event, member)] = [score]
+                else:
+                    for event, member in competition_to_emis[competition]:
+                        # rank = competition_to_emis[competition][(event, member)]
+                        # weight = params[c2*2]
+                        # bias = params[c2*2+1]
+                        score = None
+                        if (event, member) in em_to_exp:
+                            # score -= learning_rate*math.log(len(em_to_exp[(event, member)]))
+                            em_to_exp[(event, member)].append(score)
+                        else:
+                            em_to_exp[(event, member)] = [score]
+            for event, member in em_to_exp: # deal with experience
+                
+                if None in em_to_exp[(event, member)]: # see instance in left out comp
+                    total_num_repeats += 1
+                    left_out_idx = em_to_exp[(event, member)].index(None) # index of left out comp
+                    num_other_instances = len(em_to_exp[(event, member)])-1
+                    if num_other_instances==0: # no other instances
+                        pred = skill_no_exp
+                    else: # there exists other instances
+                        pred = 0
+                        for i in range(num_other_instances+1):
+                            if i != left_out_idx:
+                                pred += (em_to_exp[(event, member)][i] - params[2*i]*learning_rate*(math.log(left_out_idx+1) - math.log(i+1)))/num_other_instances
+                                # pred += (em_to_exp[(event, member)][i]+learning_rate*(math.log(left_out_idx+1)-2*math.log(i+1)))/num_other_instances
+                    # weight = max(params[c1*2], 0)
+                    weight = abs(params[c1*2])
+                    # bias = params[c1*2+1]
+                    bias = 0
+                    competition = competition_list[c1]
+                    rank = competition_to_emis[competition][(event, member)]
+                    pred = (pred - bias)/weight + learning_rate*math.log(left_out_idx+1)
+                    actual = 1-rank/competition.number_of_teams_competed
+                    # print(f"pred: {pred}, actual: {actual}")
+                    # import ipdb; ipdb.set_trace();
+                    # actual = weight*(1-rank/competition.number_of_teams_competed)+bias-learning_rate*(left_out_idx+1)
+                    total_comp_loss += abs(actual - pred)
+                    # print(num_competitions)
+                    # print(total_comp_loss)
+            # print(total_comp_loss)
+            total_loss += (total_comp_loss/total_num_repeats)/num_competitions
+        return total_loss
+    
+    # competition_to_m = {(c, c.number_of_teams_competed):[(emi.name, )]}
+    new_params = minimize(custom_loss, np.asarray([0.5 for x in range(num_competitions*2+2)]), options = {"disp":False}).x
+    print(competition_list)
+    print(new_params)
+    # competition_to_m = dict()
+    for c in Competition.objects.filter(user=request.user).order_by('date'):
+        emis_list = EventMemberInstance.objects.filter(team__competition=c)
+        for emi in emis_list:
+            emi.score
+    
+    members_to_skill_level = dict()
+    members_to_experience = dict()
+    members_to_data = dict()
+    all_events=set()
+    for c_idx in range(num_competitions):
+        c = competition_list[c_idx]
+        emis_list = EventMemberInstance.objects.filter(team__competition=c)
+        school_scores_of_competition = [x.score for x in EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
+        if len(school_scores_of_competition) != 0:
+            # average_score_of_team=sum(school_scores_of_competition)/len(school_scores_of_competition)
+            # competition_difficulty = average_score_of_team/max(1, c.number_of_teams_competed)
+            for emi in emis_list:
+                all_events.add(emi.event_name)
+                if emi.score < c.number_of_teams_competed:
+                    # score = (average_score_of_team - emi.score) / c.number_of_teams_competed
+                    weight = abs(new_params[c_idx*2])
+                    learning_rate = abs(new_params[-2])
+                    # bias = new_params[c_idx*2+1]
+                    bias = 0
+                    score = weight*(1-(emi.score/c.number_of_teams_competed)) + bias
+                    # score = competition_difficulty * (c.number_of_teams_competed - emi.score)/max(1, c.number_of_teams_competed)
+                    event = emi.event_name
+                    members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
+                    
+                    for m in members:
+                        if m in members_to_experience:
+                            if event in members_to_experience[m]:
+                                members_to_experience[m][event] += 1
+                                members_to_data[m][event] += "<li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                            else:
+                                members_to_experience[m][event] = 1
+                                members_to_skill_level[m][event] = 0
+                                members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                        else:
+                            members_to_experience[m] = {}
+                            members_to_data[m] = {}
+                            members_to_skill_level[m] = {}
+                            members_to_skill_level[m][event] = 0
+                            members_to_data[m][event] = "<ul style='padding:0;  margin-top:10px; margin-bottom:0;'><li>"+c.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                            members_to_experience[m][event] = 1
+                    # total_experience = sum([members_to_experience[member][event] for member in members])
+                    # total_skill = sum([members_to_skill_level[member][event] for member in members])
+                    for m in members:
+                        # if total_skill != 0:
+                            # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
+                        # else:
+                        members_to_skill_level[m][event] += score - weight*learning_rate*math.log(members_to_experience[m][event])
+                        # members_to_skill_level[m][event] += score
+                    # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
+                    # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score    
+    
+    for m in members_to_experience:
+        for e in members_to_experience[m]:
+            members_to_skill_level[m][e] = members_to_skill_level[m][e]/members_to_experience[m][e] + learning_rate*math.log(members_to_experience[m][e])
+    
+    # min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
+    min_score = new_params[-1]
+    max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
+    
+    for m in members_to_experience:
+        for e in members_to_experience[m]:
+            if members_to_experience[m][e] == 1:
+                members_to_skill_level[m][e] = min_score
+
+    all_events = sorted(list(all_events))
+    table_columns = ["Name"]+all_events
+    max_xp = max([max(members_to_experience[m].values(), default=0) for m in members_to_experience], default=0)
+    
+    table_info_data = [["".join([members_to_data[m][e]+"</ul>" for e in members_to_skill_level[m]])]+[members_to_data[m][e]+"</ul>" if e in members_to_skill_level[m] else "<p>No Data</p>" for e in all_events] for m in members_to_skill_level]
+    # print(members_to_skill_level)
+    table_data = [[m]+[round((members_to_skill_level[m][e]-min_score)*100/(max_score-min_score), 2) if e in members_to_skill_level[m] else 0 for e in all_events] for m in members_to_skill_level]
+    table_data = [table_data, table_info_data]
+    table_data = "var tabledata = ["+"".join(["{"+"".join(['"'+str(table_columns[i])+'":'+str(table_data[0][t][i])+','+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' if i!=0 else '"'+str(table_columns[i])+'":"'+str(table_data[0][t][i])+'",'+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' for i in range(len(table_columns))])+"}," for t in range(len(table_data[0]))])+"];"
+
+    table_data2 = [[m]+[members_to_experience[m][e] if e in members_to_experience[m] else 0 for e in all_events] for m in members_to_experience]
+    table_data2 = [table_data2, table_info_data]
+    table_data2 = "var tabledata2 = ["+"".join(["{"+"".join(['"'+str(table_columns[i])+'":'+str(table_data2[0][t][i])+','+'"'+str(table_columns[i])+'_INFO":"'+str(table_data2[1][t][i])+'",' if i!=0 else '"'+str(table_columns[i])+'":"'+str(table_data2[0][t][i])+'",'+'"'+str(table_columns[i])+'_INFO":"'+str(table_data2[1][t][i])+'",' for i in range(len(table_columns))])+"}," for t in range(len(table_data2[0]))])+"];"
+
+    context = {
+        "max_xp":max_xp,
+        "event_list":all_events,
+        "table_data":table_data,
+        "table_data2":table_data2,
+    }
+    return render(request, "data/skill_view.html", context)
+
+
+@login_required
 def skillView(request):
     # list of members that have been in all the competition so far
     member_list=Member.objects.filter(event_member_instance__team__competition__user=request.user)
@@ -199,6 +385,7 @@ def skillView(request):
     
     average_scores_of_competition_cache = {}
     
+        
     # event_to_members = {}
     
     # event_to_emis = {}
