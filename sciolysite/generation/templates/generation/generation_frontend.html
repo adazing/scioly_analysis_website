@@ -344,6 +344,7 @@
                 total_skill_score -= members_to_skill_level[m][e];
             }
         }
+        console.log(total_preference_score);
         return (
             total_preference_score * (1 - skill_vs_preferences) +
             total_skill_score * skill_vs_preferences +
@@ -359,16 +360,16 @@
     function calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score) {
         var total_skill_score = 0;
         var total_preference_score = 0;
-        {% comment %} console.log(team);
-        console.log(min_score);
-        console.log(members_to_skill_level); {% endcomment %}
-        {% comment %} console.log(required_member_event_pairs); {% endcomment %}
         // preferences
-        for (var [m, li] of Object.entries(members_to_ranked_preferences)){ // TODO: might not have to iterate through all the members
-            
-            for(var idx=0; idx<members_to_ranked_preferences.length; idx++){
-                if (team[members_to_ranked_preferences[idx]].includes(m)){
+        for (var e of Object.keys(team)){
+            {% comment %} console.log(e); {% endcomment %}
+            for (var m of team[e]){
+                {% comment %} console.log(m); {% endcomment %}
+                {% comment %} console.log(members_to_ranked_preferences[m]); {% endcomment %}
+                if (members_to_ranked_preferences[m].includes(e)){
+                    let idx = members_to_ranked_preferences[m].indexOf(e);
                     total_preference_score += (worst_preference_amount-idx)/worst_preference_amount;
+
                 }
             }
         }
@@ -404,6 +405,7 @@
                 {% comment %} console.log(`Current total_skill_score: ${total_skill_score}`); {% endcomment %}
             }
         }
+        {% comment %} console.log(total_preference_score); {% endcomment %}
         return total_skill_score * skill_vs_preferences + total_preference_score * (1-skill_vs_preferences);
     }
 

@@ -195,7 +195,7 @@ def skillView2(request):
             members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
             for m in members:
                 if emi.score < c.number_of_teams_competed:
-                    results_dict[(emi.event_name, m)] = emi.score
+                    results_dict[(emi.event_name, m)] = (1-emi.score)/c.number_of_teams_competed
         if results_dict:
             competition_to_emis[c] = results_dict
     
@@ -203,10 +203,11 @@ def skillView2(request):
     num_competitions = len(competition_list)
     
     def custom_loss(params):
-        learning_rate = abs(params[-2])
+        # experience_bias = abs(params[-3])
+        experience_rate = abs(params[-2])
         skill_no_exp = abs(params[-1])
         total_loss = 0
-        num_valid_competitions = 0
+        # num_valid_competitions = 0
         for c1 in range(num_competitions): # comp to leave out
             total_comp_loss = 0
             total_num_repeats = 0
@@ -215,16 +216,20 @@ def skillView2(request):
                 competition = competition_list[c2]
                 if c1 != c2:
                     for event, member in competition_to_emis[competition]:
-                        rank = competition_to_emis[competition][(event, member)]
+                        score = competition_to_emis[competition][(event, member)]
                         # weight = max(params[c2*2], 0)
                         weight = abs(params[c2*2])
-                        # bias = params[c2*2+1]
-                        bias = 0
-                        score = weight*(1-rank/competition.number_of_teams_competed) + bias
+                        bias = params[c2*2+1]
+                        # bias = 0
+                        # score -= len()
                         if (event, member) in em_to_exp:
+                            score -= experience_rate*(math.log(len(em_to_exp[(event, member)])))
+                            # score -= experience_rate*(math.log(len(em_to_exp[(event, member)])+experience_bias) - math.log(experience_bias))
+                            score = weight * score + bias
                             # score -= learning_rate*math.log(len(em_to_exp[(event, member)]))
                             em_to_exp[(event, member)].append(score)
                         else:
+                            score = weight * score + bias
                             em_to_exp[(event, member)] = [score]
                 else:
                     for event, member in competition_to_emis[competition]:
@@ -237,11 +242,14 @@ def skillView2(request):
                             em_to_exp[(event, member)].append(score)
                         else:
                             em_to_exp[(event, member)] = [score]
+            # exp_to_loss_dict = {x:0 for x in range(num_competitions)}
+            # exp_to_repeats_dict = {x:0 for x in range(num_competitions)}
             for event, member in em_to_exp: # deal with experience
                 
                 if None in em_to_exp[(event, member)]: # see instance in left out comp
                     total_num_repeats += 1
                     left_out_idx = em_to_exp[(event, member)].index(None) # index of left out comp
+                    # exp_to_repeats_dict[left_out_idx] += 1
                     num_other_instances = len(em_to_exp[(event, member)])-1
                     if num_other_instances==0: # no other instances
                         pred = skill_no_exp
@@ -249,7 +257,7 @@ def skillView2(request):
                         pred = 0
                         for i in range(num_other_instances+1):
                             if i != left_out_idx:
-                                pred += (em_to_exp[(event, member)][i] - params[2*i]*learning_rate*(math.log(left_out_idx+1) - math.log(i+1)))/num_other_instances
+                                pred += em_to_exp[(event, member)][i]/num_other_instances
                                 # pred += (em_to_exp[(event, member)][i]+learning_rate*(math.log(left_out_idx+1)-2*math.log(i+1)))/num_other_instances
                     # weight = max(params[c1*2], 0)
                     weight = abs(params[c1*2])
@@ -257,27 +265,36 @@ def skillView2(request):
                     bias = 0
                     competition = competition_list[c1]
                     rank = competition_to_emis[competition][(event, member)]
-                    pred = (pred - bias)/weight + learning_rate*math.log(left_out_idx+1)
+                    # pred = (pred - bias)/weight + experience_rate*(math.log(left_out_idx+1+experience_bias)-math.log(experience_bias))
+                    pred = (pred - bias)/weight + experience_rate*(math.log(left_out_idx+1))
                     actual = 1-rank/competition.number_of_teams_competed
                     # print(f"pred: {pred}, actual: {actual}")
                     # import ipdb; ipdb.set_trace();
                     # actual = weight*(1-rank/competition.number_of_teams_competed)+bias-learning_rate*(left_out_idx+1)
-                    total_comp_loss += abs(actual - pred)
+                    # exp_to_loss_dict[left_out_idx] += (actual - pred)**2
+                    total_comp_loss += (actual - pred)**2
                     # print(num_competitions)
                     # print(total_comp_loss)
+            # total_comp_loss = sum([exp_to_loss_dict[x]/exp_to_repeats_dict[x] for x in range(num_competitions) if exp_to_repeats_dict[x]!=0])
             # print(total_comp_loss)
+            # print(exp_to_loss_dict)
+            # print(exp_to_repeats_dict)
             total_loss += (total_comp_loss/total_num_repeats)/num_competitions
+            # print(total_loss)
         return total_loss
     
     # competition_to_m = {(c, c.number_of_teams_competed):[(emi.name, )]}
-    new_params = minimize(custom_loss, np.asarray([0.5 for x in range(num_competitions*2+2)]), options = {"disp":False}).x
+    new_params = minimize(custom_loss, np.asarray([0.5 for x in range(num_competitions*2+3)]), options = {"disp":False}).x
     print(competition_list)
     print(new_params)
     # competition_to_m = dict()
-    for c in Competition.objects.filter(user=request.user).order_by('date'):
-        emis_list = EventMemberInstance.objects.filter(team__competition=c)
-        for emi in emis_list:
-            emi.score
+    # for c in Competition.objects.filter(user=request.user).order_by('date'):
+    #     emis_list = EventMemberInstance.objects.filter(team__competition=c)
+    #     for emi in emis_list:
+    #         emi.score
+    experience_rate = abs(new_params[-2])
+    experience_bias = abs(new_params[-3])
+    print(experience_bias)
     
     members_to_skill_level = dict()
     members_to_experience = dict()
@@ -295,10 +312,10 @@ def skillView2(request):
                 if emi.score < c.number_of_teams_competed:
                     # score = (average_score_of_team - emi.score) / c.number_of_teams_competed
                     weight = abs(new_params[c_idx*2])
-                    learning_rate = abs(new_params[-2])
+                    # learning_rate = abs(new_params[-2])
                     # bias = new_params[c_idx*2+1]
                     bias = 0
-                    score = weight*(1-(emi.score/c.number_of_teams_competed)) + bias
+                    # score = weight*(1-(emi.score/c.number_of_teams_competed)) + bias
                     # score = competition_difficulty * (c.number_of_teams_competed - emi.score)/max(1, c.number_of_teams_competed)
                     event = emi.event_name
                     members = [m.name for m in Member.objects.filter(event_member_instance = emi)]
@@ -321,27 +338,38 @@ def skillView2(request):
                             members_to_experience[m][event] = 1
                     # total_experience = sum([members_to_experience[member][event] for member in members])
                     # total_skill = sum([members_to_skill_level[member][event] for member in members])
+                    score = 1-(emi.score/c.number_of_teams_competed)
                     for m in members:
                         # if total_skill != 0:
                             # members_to_skill_level[m][event] += membrs_to_skill_level[m][event]/total_skill*score
                         # else:
-                        members_to_skill_level[m][event] += score - weight*learning_rate*math.log(members_to_experience[m][event])
+                        # members_to_skill_level[m][event] += weight * (score - experience_rate*(math.log(members_to_experience[m][event]+experience_bias) - math.log(experience_bias))) + bias
+                        members_to_skill_level[m][event] += weight * (score - experience_rate*(math.log(members_to_experience[m][event]))) + bias
                         # members_to_skill_level[m][event] += score
                     # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score
                     # members_to_skill_level[m][event] += members_to_experience[m][event]/total_experience * score    
+    # print(members_to_skill_level)
+    # print(members_to_experience)
+    average_weight = np.average(new_params[:-2:2])
+    average_bias = np.average(new_params[1:-2:2])
+    # print(new_params[:-2:2])
+    # print(new_params[1:-2:2])
+    # print(average_weight)
+    # print(average_bias)
+    average_bias = 0
     
     for m in members_to_experience:
         for e in members_to_experience[m]:
-            members_to_skill_level[m][e] = members_to_skill_level[m][e]/members_to_experience[m][e] + learning_rate*math.log(members_to_experience[m][e])
-    
-    # min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
-    min_score = new_params[-1]
+            members_to_skill_level[m][e] = (members_to_skill_level[m][e]/members_to_experience[m][e] - average_bias) * average_weight + experience_rate*(math.log(members_to_experience[m][e]))
+    print(members_to_skill_level)
+    min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
+    # min_score = abs(new_params[-1])
     max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
     
-    for m in members_to_experience:
-        for e in members_to_experience[m]:
-            if members_to_experience[m][e] == 1:
-                members_to_skill_level[m][e] = min_score
+    # for m in members_to_experience:
+    #     for e in members_to_experience[m]:
+    #         if members_to_experience[m][e] == 1:
+    #             members_to_skill_level[m][e] = min_score
 
     all_events = sorted(list(all_events))
     table_columns = ["Name"]+all_events

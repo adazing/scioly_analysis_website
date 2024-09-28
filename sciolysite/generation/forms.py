@@ -434,7 +434,8 @@ class RequirementsForm(ModelForm):
             for e in events_done_by_member+[event]:
                 if e.conflict in conflicts:
                     raise forms.ValidationError(member.name+" cannot be placed in two events that have conflicting time slots.")
-                conflicts.append(e.conflict)
+                if e.conflict != None:
+                    conflicts.append(e.conflict)
         return cleaned_data
         # 
         # cleaned_data = super().clean()
