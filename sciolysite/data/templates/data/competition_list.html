@@ -2,6 +2,7 @@
 
     {% block bodycontent %}
         <div class="card w-75 mx-auto my-4"><a href="{% url 'competitionCreateView' %}" class="btn btn-primary">Add Competition Data</a></div>
+        <div class="card w-75 mx-auto my-4"><a href="{% url 'practiceCreateView' %}" class="btn btn-primary">Add Practice Data</a></div>
 
         {% for c in competition_list %}
             <div class="card w-75 mx-auto my-3">
@@ -9,6 +10,15 @@
                 <div class="card-body">
                     <a href="{% url 'competitionView' pk=c.id %}" class="btn btn-secondary">View</a>
                     <a href="{% url 'competitionDeleteView' pk=c.id %}" class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+        {% endfor %}
+        {% for p in practice_list %}
+            <div class="card w-75 mx-auto my-3">
+                <h5 class="card-header">Practice {{p.event_name}}</h5>
+                <div class="card-body">
+                    <a href="{% url 'practiceView' pk=p.id %}" class="btn btn-secondary">View</a>
+                    <a href="{% url 'practiceDeleteView' pk=p.id %}" class="btn btn-danger">Delete</a>
                 </div>
             </div>
         {% endfor %}

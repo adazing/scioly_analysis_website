@@ -46,3 +46,23 @@ class Member(models.Model):
     class Meta:
         ordering = ["name"]
 
+
+class Practice(models.Model):
+    event_name = models.CharField(max_length=200)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateField(auto_now=False,auto_now_add=False)
+    total_points = models.FloatField()
+
+class EventMemberPracticeInstance(models.Model):
+    practice = models.ForeignKey(Practice, on_delete = models.CASCADE)
+    member_name = models.CharField(max_length=200)
+    points_scored = models.FloatField()
+
+# class PracticeMember(models.Model):
+#     name = models.CharField(max_length=200)
+#     practice_instance = models.ForeignKey(EventMemberPracticeInstance, on_delete = models.CASCADE)
+#     def __str__(self):
+#         return self.name+" got a practice score of "+str(self.practice_instance.points_scored)+" on "+self.self.practice_instance.practice.event_name+" out of "+str(self.practice_instance.practice.)
+#     class Meta:
+#         ordering = ["name"]
+

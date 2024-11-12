@@ -1,0 +1,61 @@
+{% extends 'main.html' %}
+
+    {% block bodycontent %}
+    <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
+    <div class="jumbotron">
+      <h1 class="display-4">Practice {{practice.event_name}}</h1>
+      <p class="lead">{{practice.total_points}} max points</p>
+      <hr class="my-4">
+      <p>{{practice.date}}</p>
+      <p>
+          {% comment %} <a class="btn btn-primary btn-lg" href="{% url 'competitionEditView' pk=competition.id %}" role="button">Edit {{competition.name}}</a> {% endcomment %}
+          <a class="btn btn-danger btn-lg" href="{% url 'practiceDeleteView' pk=practice.id %}" role="button">Delete Practice {{practice.event_name}}</a>
+      </p>
+    </div>
+
+    <h2 class="w-75 mx-auto my-4">{{practice.event_name}}</h2>
+    <div class="card w-75 mx-auto my-4">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Member</th>
+            <th scope="col">Points</th>
+          </tr>
+        </thead>
+          {% for x in results %}
+          <tr scope="row">
+              {% comment %} {% for y in x%} {% endcomment %}
+              <td>{{ x.0 }}</td>
+              <td style="background: hsl(200,100%,{{x.2.0}}%); color: {{x.2.1}};">{{ x.1 }}</td>
+              {% comment %} {% endfor %} {% endcomment %}
+          </tr>
+          {% endfor %}
+        </table>
+    </div>
+
+    {% comment %} <div style="break-after:page"></div>
+
+    <div class="card w-75 mx-auto my-4">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Member</th>
+            {% for i in max_events_per_member %}
+            <th scope="col">Event {{i}}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        {% for key, value in results2.items %}
+        <tr scope="row">
+        <td>{{key}}</td>
+        {% for event in value %}
+        <td style="background: hsl(200,100%,{{event.1}}%); color: {{event.2}};">{{event.0}}</td>
+        {% endfor%}
+        <tr>
+        {% endfor %}
+      </table>
+    </div> {% endcomment %}
+    {% comment %} <div class="card w-75 mx-auto my-4">
+      <button onclick="window.print();return false;" class="btn btn-primary">Print</button>
+    </div> {% endcomment %}
+    {% endblock %}

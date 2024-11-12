@@ -141,3 +141,73 @@ class NameChangeForm(forms.Form):
             if remove_punctuation(name, False) == "":
                 raise forms.ValidationError("Replacement name is not valid.")
         return cleaned_data
+
+class PracticeForm(ModelForm):
+    # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
+    score_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), label="Score CSV data")
+    class Meta:
+        model = Practice
+        fields = [
+            "event_name",
+            "date",
+            "total_points",
+        ]
+        # labels = {
+        #     "name": "Name of Team"
+        # }
+    def clean_score_data(self, *args, **kwargs):
+        score_data = self.cleaned_data.get("score_data")
+        
+        if score_data.size > 1 * 1024 * 1024:  # 1MB limit
+            raise forms.ValidationError("File size must be under 1MB.")
+        
+        # check if ending is csv file
+        if not score_data.name.endswith(".csv"):
+            raise forms.ValidationError("This is not a valid csv file.")
+        
+        # try to read the file and validate
+        try:
+            score_data.seek(0)  # Reset file pointer to start
+            score_data_content = io.TextIOWrapper(score_data.file, encoding='utf-8').read()
+            reader = csv.reader(score_data_content.splitlines(), delimiter=',')
+            # next(reader)  # Skip header
+        except:
+            raise forms.ValidationError("This is not a valid csv file.")
+        row_num = 0
+        done_members = []
+        for i, row in enumerate(reader):
+            # see if row length is changes --> tampering with file?
+            if i==0:
+                row_length=len(row)
+            elif len(row)!=row_length:
+                raise forms.ValidationError("This is not a valid csv file.")
+            
+            if row_length != 2:
+                raise forms.ValidationError("This is not the correct format. The length of each row should be 2 (member, points).")
+            
+            # see if score is an float
+            try:
+                score = float(row[1].strip())
+            except:
+                raise forms.ValidationError("Some of the point values are non-float values.")
+
+            if score<0:
+                raise forms.ValidationError("Some of the point values are less than 0.")
+
+            # if event_name is blank, means reached end of file
+            member_name=row[0]
+            member_name=remove_punctuation(member_name, True)
+            if member_name!="":
+                # event is repeated?
+                if member_name in done_members:
+                    raise forms.ValidationError("There are some member repeats.")
+                                    
+                done_members.append(member_name)
+                row_num += 1
+            else: # reached end
+                break
+        if row_num <= 0:
+            raise forms.ValidationError("Not enough valid rows.")
+        elif row_num >= 100:
+            raise forms.ValidationError("Cannot have more than 100 rows.")
+        return score_data_content

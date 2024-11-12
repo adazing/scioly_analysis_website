@@ -2,6 +2,9 @@ from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
+    path('practice/<str:pk>/', views.practiceView, name="practiceView"),
+    path('practice-create/', views.practiceCreateView, name="practiceCreateView"),
+    path('practice-delete/<str:pk>/', views.practiceDeleteView, name="practiceDeleteView"),
     path('competition/<str:pk>/', views.competitionView, name="competitionView"),
     path('competition-create/', views.competitionCreateView, name="competitionCreateView"),
     path('competition-edit/<str:pk>/', views.competitionEditView, name="competitionEditView"),
@@ -10,7 +13,7 @@ urlpatterns = [
     path('team-create/<str:pk>/', views.teamCreateView, name="teamCreateView"),
     path('team-delete/<str:pk>/', views.teamDeleteView, name="teamDeleteView"),
     path('', views.competitionListView, name="competitionListView"),
-    path('skills/', views.skillView, name="skillView"),
-    path('test-skills/', views.skillView2, name="skillView2"),
+    path('skills/', views.skillView2, name="skillView"),
+    path('test-skills/', views.skillView, name="skillView2"),
     path('name-change/', views.nameChange, name="nameChange"),
 ]
