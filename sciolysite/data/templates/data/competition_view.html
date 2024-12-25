@@ -3,7 +3,7 @@
     {% block bodycontent %}
     <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
 
-        <div class="jumbotron">
+        <div class="bg-light p-5 mb-4 rounded-3">
             <h1 class="display-4">{{competition.name}}</h1>
             <p class="lead">{{competition.number_of_teams_competed}} teams competed in total</p>
             <hr class="my-4">

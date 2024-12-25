@@ -127,7 +127,7 @@
     }
 
 
-    function improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, skill_vs_preferences) {
+    {% comment %} function improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, skill_vs_preferences) {
         var result = [];
         for (var t = 0; t < teams_list.length; t++) {
             var members_to_events = {};
@@ -192,7 +192,7 @@
             result.push(best_team);
         }
         return result;
-    }
+    } {% endcomment %}
 
 
     let pastel_colors = ["FFE9D0", "FFFED3", "BBE9FF", "B1AFFF", "E7F0DC", "E7D4B5", "EF9C66", "C8CFA0", "E1ACAC", "E1AFD1", "E493B3"];
@@ -293,7 +293,7 @@
         return JSON.parse(JSON.stringify(team));
     }
 
-    function calculate_preferences_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences) {
+    {% comment %} function calculate_preferences_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences) {
         var empty_spots = Object.keys(team).map(function (e) {
             return 2 - team[e].length + (events_with_3_members.includes(e) ? 1 : 0);
         });
@@ -354,7 +354,7 @@
                 10000 +
             required_member_event_preferences_not_yet_fulfilled.length * 1000
         );
-    }
+    } {% endcomment %}
 
 
     function calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score) {

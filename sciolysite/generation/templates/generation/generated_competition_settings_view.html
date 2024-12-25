@@ -2,7 +2,7 @@
 
     {% block bodycontent %}
     <a href="{% url 'generatedCompetitionsListView' %}" class="btn btn-primary">Back</a>
-        <div class="jumbotron">
+        <div class="bg-light p-5 mb-4 rounded-3">
             <h1 class="display-4">{{generated_competition_settings.name}}</h1>
             <p class="lead">{{generated_competition_settings.notes}}</p>
             <hr class="my-4">

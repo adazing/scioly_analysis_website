@@ -75,7 +75,7 @@ class AvailableMember(models.Model):
         is_senior=" (senior)" if self.is_senior else ""
         # is_officer = " (officer)" if self.is_officer else ""
         # return self.name+is_senior
-        return self.generated_competition_settings.name+" "+self.name+is_senior
+        return self.name+is_senior
     class Meta:
         ordering = ["name"]
 

@@ -2,7 +2,7 @@
 
     {% block bodycontent %}
     <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
-    <div class="jumbotron">
+    <div class="bg-light p-5 mb-4 rounded-3">
       <h1 class="display-4">Practice {{practice.event_name}}</h1>
       <p class="lead">{{practice.total_points}} max points</p>
       <hr class="my-4">
