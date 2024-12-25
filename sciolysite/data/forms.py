@@ -13,6 +13,27 @@ def remove_punctuation(input_string, is_event): # make it so only allow for lett
         input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
     return input_string.strip().title()
 
+class SkillDataForm(ModelForm):
+    class Meta:
+        model = SkillData
+        fields = [
+            "experience_rate",
+            "start_date",
+            "end_date",
+        ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type":"date"}),
+            "end_date": forms.DateInput(attrs={"type":"date"}),
+            "experience_rate": forms.NumberInput(attrs={"type":"range", "min":0, "max":100, "value":0.1}),
+        }
+        labels = {
+            "experience_rate":"value of experience",
+        }
+    # def clean_experience_rate(self):
+    #     experience_rate = self.cleaned_data.get('experience_rate')
+    #     if experience_rate<0 or experience_rate>5:
+    #         raise forms.ValidationError("The experience rate must be between 0 and 5.")
+    #     return experience_rate
 
 class CompetitionForm(ModelForm):
     class Meta:
@@ -29,7 +50,7 @@ class CompetitionForm(ModelForm):
         labels = {
             "name" : "Name of competition",
             "date" : "Date of competition",
-            "number_of_teams_competed" : "Total number of teams that participated in the Competition",
+            "number_of_teams_competed" : "Total number of teams that participated in the Competition (including your school's teams)",
         }
     def clean_number_of_teams_competed(self):
         number_of_teams_competed = self.cleaned_data.get("number_of_teams_competed")
@@ -155,6 +176,9 @@ class PracticeForm(ModelForm):
         # labels = {
         #     "name": "Name of Team"
         # }
+        widgets = {
+            "date": forms.DateInput(attrs={"type":"date"}),
+        }
     def clean_score_data(self, *args, **kwargs):
         score_data = self.cleaned_data.get("score_data")
         

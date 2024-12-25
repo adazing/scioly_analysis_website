@@ -16,7 +16,10 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core import serializers
 import json
-
+import math
+import time
+from scipy.optimize import minimize
+import numpy as np
 
 # Create your views here.
 
@@ -412,6 +415,265 @@ def generatedTeamDeleteView(request, pk): # TODO: FIX
     raise Http404
 
 def frontend_generate(request, pk):
+    generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
+
+    if generated_competition_settings.user.id != request.user.id:
+        raise Http404
+    if not data.models.SkillData.objects.filter(user=request.user).exists():
+        data.models.SkillData.objects.create(user=request.user)
+    skill_data = data.models.SkillData.objects.get(user=request.user)
+    competition_list = data.models.Competition.objects.filter(user=request.user, date__gte=skill_data.start_date, date__lte=skill_data.end_date).order_by('date') # list of competitions
+    practice_list = data.models.Practice.objects.filter(user=request.user, date__gte=skill_data.start_date, date__lte=skill_data.end_date).order_by('date') # list of practice instances
+    competition_to_emis = {} # dictionary that maps competitions to dictionary that pairs (event, member) to quartile
+    for c in competition_list: # for all the competitions
+        emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c) # get all the events
+        results_dict = dict()
+        for emi in emis_list: # for each of the events
+            members = [m.name for m in data.models.Member.objects.filter(event_member_instance = emi)] # get all the members in event
+            for m in members: # for each member on the event
+                if emi.score < c.number_of_teams_competed: # if the scores is less than the number of teams that competed
+                    results_dict[(emi.event_name, m)] = 1-emi.score/c.number_of_teams_competed
+        if results_dict:
+            competition_to_emis[c] = results_dict
+    for p in practice_list:
+        emis_list = data.models.EventMemberPracticeInstance.objects.filter(practice=p)
+        results_dict = dict()
+        for emi in emis_list:
+            member = emi.member_name
+            results_dict[(p.event_name, member)] = emi.points_scored/p.total_points
+        if results_dict:
+            competition_to_emis[p] = results_dict
+    
+    all_list = [c for c in competition_to_emis] # all the competitions that have data
+    num_competitions = len(all_list) # number of valid competitions
+    no_matches_comps = set()
+    def custom_loss(params): # calculates math to minimize
+        discovered_experience_rate = abs(params[-2])
+        skill_no_exp = abs(params[-1])
+        total_loss = 0
+        for c1 in range(num_competitions): # comp to leave out
+            total_comp_loss = 0
+            total_num_repeats = 0
+            em_to_exp = dict()
+            for c2 in range(num_competitions): # for all other comps
+                competition = all_list[c2] # other competition you are looking at
+                if c1 != c2: # make sure the comp to leave out isn't equivalent to the other comp
+                    for event, member in competition_to_emis[competition]: # for all the scores in the other comp
+                        score = competition_to_emis[competition][(event, member)]
+                        weight = abs(params[c2]*2) # difficulty weight of competition
+                        bias = params[c2]*2+1
+                        # update event, member pair prev data
+                        if (event, member) in em_to_exp:
+                            num_times_member_did_event_previously = len(em_to_exp[(event, member)])+1
+                            score -= discovered_experience_rate*(math.log(num_times_member_did_event_previously))
+                            score = weight * score + bias
+                            em_to_exp[(event, member)].append(score)
+                        else:
+                            score = weight * score + bias
+                            em_to_exp[(event, member)] = [score]
+                else: # if it's the competition to leave out, add the score None to people's data
+                    for event, member in competition_to_emis[competition]:
+                        score = None
+                        if (event, member) in em_to_exp:
+                            em_to_exp[(event, member)].append(score)
+                        else:
+                            em_to_exp[(event, member)] = [score]
+            no_matches = True # if the comp has no matches with other comps, then not possible so ignore
+            for event, member in em_to_exp: # for every event, member pair in em_to_exp data
+                if None in em_to_exp[(event, member)]: # the event, member pair participated in left out competition
+                    total_num_repeats += 1 
+                    left_out_idx = em_to_exp[(event, member)].index(None) # index of left out comp
+                    num_other_instances = len(em_to_exp[(event, member)])-1
+                    if num_other_instances==0: # no other instances, left out comp is first time doing it
+                        pred = skill_no_exp
+                    else: # there exists other instances, calculate average of all other past instances
+                        no_matches = False
+                        pred = 0
+                        for i in range(num_other_instances+1):
+                            if i != left_out_idx:
+                                pred += em_to_exp[(event, member)][i]/num_other_instances
+                    weight = abs(params[c1*2]) # difficulty weight of left out comp
+                    bias = params[c1*2+1] # bias of left out comp
+                    competition = all_list[c1]
+                    actual = competition_to_emis[competition][(event, member)] # actual score
+                    pred = (pred - bias)/ weight + discovered_experience_rate*(math.log(left_out_idx+1))
+                    total_comp_loss += (actual - pred)**2
+            if no_matches:
+                no_matches_comps.add(c1)
+            else:
+                total_loss += (total_comp_loss/total_num_repeats)/num_competitions
+
+        return total_loss
+    
+    class TimeLimitCallback:
+        def __init__(self, time_limit):
+            self.start_time = time.time()
+            self.time_limit = time_limit
+            self.best_result = None
+
+        def __call__(self, xk):
+            elapsed_time = time.time() - self.start_time
+            if elapsed_time >= self.time_limit:
+                raise StopIteration("Time limit reached")
+            self.best_result = xk
+    time_limit = 5 #seconds
+    callback = TimeLimitCallback(time_limit)
+    try:
+        new_params = minimize(custom_loss, np.asarray([0.5 for x in range(num_competitions*2+2)]), options={"disp":False}, callback=callback).x
+    except StopIteration:
+        new_params = callback.best_result
+    print(new_params)
+    print("experience rate",abs(new_params[-2]))
+
+
+    # teams that are in generated_competition_settings
+    teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
+    available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)]
+    available_events = sorted([e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)])
+    events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
+    build_events = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, is_build_event=True)]
+    
+    member_event_pairs = [(me.member.name, me.event.name, me.rank) for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)]
+
+    worst_preference_amount = max([m_e[2] for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
+    member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name if mme.event is not None else None] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)]
+    # officers = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, status="O")]
+    # senior_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, is_senior=True)]
+    required_members = []
+    required_members_on_events = []
+    # teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
+    for t in range(len(teams)):
+        requirements = RequiredMemberToTeam.objects.filter(team=teams[t])
+        t_required_members = []
+        t_required_members_on_events = []
+        for r in requirements:
+            if r.member.name not in t_required_members:
+                t_required_members.append(r.member.name)
+            if r.event is not None:
+                t_required_members_on_events.append([r.member.name, r.event.name])
+        required_members.append(t_required_members)
+        required_members_on_events.append(t_required_members_on_events)
+
+
+    seniors = [m.name for m in AvailableMember.objects.filter(generated_competition_settings=generated_competition_settings, is_senior=True)]
+    conflicting_events=[[e.name for e in AvailableEvent.objects.filter(conflict=c, generated_competition_settings=generated_competition_settings)] for c in ConflictingEvents.objects.filter(generated_competition_settings=generated_competition_settings)]
+    event_types = [[e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, event_type = et)] for et in EventType.objects.filter(generated_competition_settings=generated_competition_settings)]
+
+    members_to_ranked_preferences = dict()
+    # add members with ranked_preferences
+    for member, event, rank in member_event_pairs:
+        if member in members_to_ranked_preferences:
+            members_to_ranked_preferences[member].append((event, rank))
+        else:
+            members_to_ranked_preferences[member]=[(event, rank)]
+
+    # add members with no ranked preferences
+    for m in available_members:
+        if m not in members_to_ranked_preferences:
+            members_to_ranked_preferences[m]=[]
+
+    # sort members_to_ranked_preferences
+    members_to_ranked_preferences = {m:[p[0] for p in sorted(members_to_ranked_preferences[m], key= lambda x:x[1])] for m in members_to_ranked_preferences}
+            
+    #review previous competition data
+    members_to_experience={m:{e:0 for e in available_events} for m in available_members}
+    members_to_skill_level={m:{e:0 for e in available_events} for m in available_members}
+
+
+    valid_weights = [new_params[w*2] for w in range(num_competitions) if w not in no_matches_comps]
+    valid_biases = [new_params[2*b+1] for b in range(num_competitions) if b not in no_matches_comps]
+    if len(valid_weights) == 0:
+        average_weight = 0.5
+        average_bias = 0
+    else:
+        average_weight = sum(valid_weights)/len(valid_weights)
+        average_bias = sum(valid_biases)/len(valid_biases)
+    for non_valid_comp in no_matches_comps:
+        new_params[non_valid_comp*2] = average_weight
+        new_params[non_valid_comp*2+1] = average_bias
+    for x in range(num_competitions):
+        print(all_list[x], new_params[x])
+    
+    print(no_matches_comps)
+    
+    discovered_experience_rate = abs(new_params[-2])
+    
+    members_to_skill_level = dict()
+    members_to_experience = dict()
+    # members_to_data = dict()
+    # all_events=set()
+    for c_idx in range(num_competitions):
+        c = all_list[c_idx]
+        emis_list = data.models.EventMemberInstance.objects.filter(team__competition=c)
+        school_scores_of_competition = [x.score for x in data.models.EventMemberInstance.objects.filter(team__competition=c) if x.score<=x.team.competition.number_of_teams_competed]
+        if len(school_scores_of_competition) != 0:
+            for emi in emis_list:
+                # all_events.add(emi.event_name)
+                if emi.score < c.number_of_teams_competed:
+                    weight = abs(new_params[c_idx*2])
+                    bias = new_params[c_idx*2+1]
+                    event = emi.event_name
+                    members = [m.name for m in data.models.Member.objects.filter(event_member_instance = emi)]
+                    
+                    for m in members:
+                        if m in members_to_experience:
+                            if event in members_to_experience[m]:
+                                members_to_experience[m][event] += 1
+                                if c in competition_list:
+                                    score = 1-(emi.score/c.number_of_teams_competed)
+                                else:
+                                    score = emi.points_scored/c.total_points
+                                members_to_skill_level[m][event] += weight * (score - discovered_experience_rate*(math.log(members_to_experience[m][event]))) + bias
+    
+    experience_rate = skill_data.experience_rate
+    for m in members_to_experience:
+        for e in members_to_experience[m]:
+            members_to_skill_level[m][e] = (members_to_skill_level[m][e]/members_to_experience[m][e] - average_bias)/ average_weight + experience_rate*(math.log(members_to_experience[m][e]+1))
+
+    min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
+    max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
+
+    # scale members_to_skill_level to be between 0 and 1
+    for m in members_to_skill_level:
+        for e in available_events:
+            if e not in members_to_skill_level[m]:
+                members_to_skill_level[m][e] = 0
+            else:
+                if max_score - min_score != 0:
+                    members_to_skill_level[m][e] = (members_to_skill_level[m][e] - min_score) / (max_score - min_score)
+                else:
+                    members_to_skill_level[m][e] = 0
+        members_to_skill_level[m]=dict(sorted(members_to_skill_level[m].items(), key=lambda item: item[1], reverse=True))
+
+
+    context = {
+        "id" : pk,
+        "required_members_on_events" : required_members_on_events,
+        "required_members" : required_members,
+        "seniors" : seniors,
+        "teams" : [t.team_size for t in teams],
+        "team_names" : [t.name for t in teams],
+        "members_to_ranked_preferences" : members_to_ranked_preferences,
+        "member_member_event_pairs" : json.dumps(member_member_event_pairs),
+        "generated_competition_settings" : generated_competition_settings,
+        "available_members" : available_members,
+        "available_events" : available_events,
+        "events_with_3_members" : events_with_3_members,
+        "build_events" : build_events,
+        "worst_preference_amount" : worst_preference_amount,
+        "members_to_skill_level" : members_to_skill_level,
+        "members_to_experience" : members_to_experience,
+        # "empty_list" : [[], [], []],
+        # "build_events" : build_events,
+        "conflicting_events" : conflicting_events,
+        # "required_member_event_pairs" : required_member_event_pairs,
+        "event_types" : event_types,
+        "min_score" : min_score,
+    }
+    return render(request, "data/skill_view.html", context)
+
+
+def frontend_generate2(request, pk):
     generated_competition_settings = get_object_or_404(GeneratedCompetitionSettings, id=pk)
     if generated_competition_settings.user.id == request.user.id:
         # teams that are in generated_competition_settings

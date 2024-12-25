@@ -1,5 +1,5 @@
 {% extends 'main.html' %}
-
+{% load crispy_forms_tags %}
 {% load custom_tags %}
 
     {% block headercontent %}
@@ -10,6 +10,16 @@
         <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     {% endblock %}
     {% block bodycontent %}
+
+    <div class="formblock">
+        <p class="h4">Change Settings:</p>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form|crispy}}
+            <input type="submit" value="OK" class="btn btn-primary">
+        </form>
+    </div>
+
     <div class="formblock">
         <h4>Experience</h4>
             <div id ="experience-table"></div>

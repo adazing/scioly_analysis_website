@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from datetime import date
 
 # Create your models here.
 
@@ -58,6 +58,13 @@ class EventMemberPracticeInstance(models.Model):
     member_name = models.CharField(max_length=200)
     points_scored = models.FloatField()
 
+
+class SkillData(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    experience_rate = models.FloatField(default = 0.1)
+    start_date = models.DateField(default = date(date.today().year, 8, 1))
+    end_date = models.DateField(default = date(date.today().year + 1, 8, 1))
+# class SkillDataVal(models.Model)
 # class PracticeMember(models.Model):
 #     name = models.CharField(max_length=200)
 #     practice_instance = models.ForeignKey(EventMemberPracticeInstance, on_delete = models.CASCADE)
