@@ -8,7 +8,7 @@
       <hr class="my-4">
       <p>{{practice.date}}</p>
       <p>
-          {% comment %} <a class="btn btn-primary btn-lg" href="{% url 'competitionEditView' pk=competition.id %}" role="button">Edit {{competition.name}}</a> {% endcomment %}
+          <a class="btn btn-primary btn-lg" href="{% url 'practiceEditView' pk=practice.id %}" role="button">Edit Practice {{practice.event_name}}</a>
           <a class="btn btn-danger btn-lg" href="{% url 'practiceDeleteView' pk=practice.id %}" role="button">Delete Practice {{practice.event_name}}</a>
       </p>
     </div>

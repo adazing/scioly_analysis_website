@@ -300,10 +300,47 @@ class CompetitionSettingsForm(ModelForm):
             raise forms.ValidationError("The maximum events per member cannot be smaller than the minimum events per member.")
         return self.cleaned_data
 
-    # def clean(self):
-    #     cleaned_data = super().clean()
-    #     if self.num_total_comps > 1000:
-    #         raise forms.ValidationError("You have reached the maximum number of ")
+
+class CompetitionSettingsEditForm(ModelForm):
+
+    class Meta:
+        model = GeneratedCompetitionSettings
+        fields = [
+            "name",
+            "notes",
+            "max_events_per_member",
+            "min_events_per_member",
+            "skill_vs_preferences",
+            "max_num_of_build_events_per_member",
+        ]
+        labels= {
+            "name":"Name of upcoming competition",
+        }
+        widgets = {
+            'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
+            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5})
+        }
+      
+    # def clean_min_events_per_member(self):
+    #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
+    def clean_skill_vs_preferences(self):
+        skill_vs_preferences = self.cleaned_data.get("skill_vs_preferences")
+        if skill_vs_preferences>1 or skill_vs_preferences<0:
+            raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
+        return skill_vs_preferences
+
+    def clean_min_events_per_member(self):
+        min_events_per_member = self.cleaned_data.get("min_events_per_member")
+        if min_events_per_member<1:
+            raise forms.ValidationError("The minimum events per member cannot be smaller than 1.")
+        return min_events_per_member
+    
+    def clean(self):
+        max_events_per_member = self.cleaned_data.get("max_events_per_member")
+        min_events_per_member = self.cleaned_data.get("min_events_per_member")
+        if max_events_per_member < min_events_per_member:
+            raise forms.ValidationError("The maximum events per member cannot be smaller than the minimum events per member.")
+        return self.cleaned_data
 
 
 class TeamForm(ModelForm):

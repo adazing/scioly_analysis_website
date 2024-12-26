@@ -147,18 +147,16 @@ class NameChangeForm(forms.Form):
     def clean(self):
         cleaned_data = self.cleaned_data
         event = self.cleaned_data.get("event")
-        event = event if event else None
         member = self.cleaned_data.get("member")
-        member = member if member else None
         name = self.cleaned_data.get("name")
-        if event == None and member == None:
+        if event == "" and member == "":
             raise forms.ValidationError("You must specify what you are replacing in the data.")
-        elif event != None and member != None:
+        elif event != "" and member != "":
             raise forms.ValidationError("Error submitting form.")
-        elif member == None:
+        elif member == "":
             if remove_punctuation(name, True) == "":
                 raise forms.ValidationError("Replacement name is not valid.")
-        elif event == None:
+        elif event == "":
             if remove_punctuation(name, False) == "":
                 raise forms.ValidationError("Replacement name is not valid.")
         return cleaned_data
@@ -235,3 +233,17 @@ class PracticeForm(ModelForm):
         elif row_num >= 100:
             raise forms.ValidationError("Cannot have more than 100 rows.")
         return score_data_content
+
+
+class PracticeEditForm(ModelForm):
+    # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
+    class Meta:
+        model = Practice
+        fields = [
+            "event_name",
+            "date",
+            "total_points",
+        ]
+        widgets = {
+            "date": forms.DateInput(attrs={"type":"date"}),
+        }
