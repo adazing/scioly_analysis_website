@@ -378,7 +378,8 @@ def frontend_generate(request, pk):
                         # update event, member pair prev data
                         if (event, member) in em_to_exp:
                             num_times_member_did_event_previously = len(em_to_exp[(event, member)])+1
-                            score -= discovered_experience_rate*(math.log(num_times_member_did_event_previously))
+                            # score -= discovered_experience_rate*(math.log(num_times_member_did_event_previously))
+                            score -= discovered_experience_rate*num_times_member_did_event_previously
                             score = weight * score + bias
                             em_to_exp[(event, member)].append(score)
                         else:
@@ -409,7 +410,8 @@ def frontend_generate(request, pk):
                     bias = params[c1*2+1] # bias of left out comp
                     competition = all_list[c1]
                     actual = competition_to_emis[competition][(event, member)] # actual score
-                    pred = (pred - bias)/ weight + discovered_experience_rate*(math.log(left_out_idx+1))
+                    # pred = (pred - bias)/ weight + discovered_experience_rate*(math.log(left_out_idx+1))
+                    pred = (pred - bias)/ weight + discovered_experience_rate*(left_out_idx+1)
                     total_comp_loss += (actual - pred)**2
             if no_matches:
                 no_matches_comps.add(c1)
@@ -435,7 +437,7 @@ def frontend_generate(request, pk):
         new_params = minimize(custom_loss, np.asarray([0.5 for x in range(num_competitions*2+2)]), options={"disp":False}, callback=callback).x
     except StopIteration:
         new_params = callback.best_result
-
+    new_params = new_params.tolist()
 
     # teams that are in generated_competition_settings
     teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
@@ -521,7 +523,8 @@ def frontend_generate(request, pk):
                                 if event in members_to_experience[m]:
                                     members_to_experience[m][event] += 1
                                     score = 1-(emi.score/c.number_of_teams_competed)
-                                    members_to_skill_level[m][event] += weight * (score - discovered_experience_rate*(math.log(members_to_experience[m][event]))) + bias
+                                    # members_to_skill_level[m][event] += weight * (score - discovered_experience_rate*(math.log(members_to_experience[m][event]))) + bias
+                                    members_to_skill_level[m][event] += weight * (score - discovered_experience_rate*members_to_experience[m][event]) + bias
         else:
             emis_list = data.models.EventMemberPracticeInstance.objects.filter(practice=c)
             for emi in emis_list:
@@ -534,12 +537,15 @@ def frontend_generate(request, pk):
                     if event in members_to_experience[member]:
                         members_to_experience[member][event] += 1
                         score = emi.points_scored/c.total_points
-                        members_to_skill_level[member][event] += weight * (score - discovered_experience_rate*(math.log(members_to_experience[member][event]))) + bias
+                        # members_to_skill_level[member][event] += weight * (score - discovered_experience_rate*(math.log(members_to_experience[member][event]))) + bias
+                        members_to_skill_level[member][event] += weight * (score - discovered_experience_rate*members_to_experience[member][event]) + bias
+    
     experience_rate = skill_data.experience_rate
     for m in members_to_experience:
         for e in members_to_experience[m]:
             if members_to_experience[m][e]!=0:
-                members_to_skill_level[m][e] = (members_to_skill_level[m][e]/members_to_experience[m][e] - average_bias)/ average_weight + experience_rate*(math.log(members_to_experience[m][e]+1))
+                # members_to_skill_level[m][e] = (members_to_skill_level[m][e]/members_to_experience[m][e] - average_bias)/ average_weight + experience_rate*(math.log(members_to_experience[m][e]+1))
+                members_to_skill_level[m][e] = (members_to_skill_level[m][e]/members_to_experience[m][e] - average_bias)/ average_weight + experience_rate*(members_to_experience[m][e]+1)
     min_score = min([min([members_to_skill_level[m][e] for e in members_to_skill_level[m] if members_to_experience[m][e]>0], default = 0) for m in members_to_skill_level], default=0)
     max_score = max([max([members_to_skill_level[m][e] for e in members_to_skill_level[m] if members_to_experience[m][e]>0], default = 1) for m in members_to_skill_level], default=1)
     

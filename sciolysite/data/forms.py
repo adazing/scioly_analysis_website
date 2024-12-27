@@ -24,7 +24,7 @@ class SkillDataForm(ModelForm):
         widgets = {
             "start_date": forms.DateInput(attrs={"type":"date"}),
             "end_date": forms.DateInput(attrs={"type":"date"}),
-            "experience_rate": forms.NumberInput(attrs={"type":"range", "min":0, "max":100, "value":0.1}),
+            "experience_rate": forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.1}),
         }
         labels = {
             "experience_rate":"value of experience",

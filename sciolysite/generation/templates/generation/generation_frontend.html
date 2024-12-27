@@ -368,14 +368,14 @@
                 {% comment %} console.log(members_to_ranked_preferences[m]); {% endcomment %}
                 if (members_to_ranked_preferences[m].includes(e)){
                     let idx = members_to_ranked_preferences[m].indexOf(e);
-                    total_preference_score += (worst_preference_amount-idx)/worst_preference_amount;
+                    total_preference_score += (worst_preference_amount-idx+1)/worst_preference_amount;
 
                 }
             }
         }
 
 
-        // skills
+        // partner preferences
         for (var e in team) {
             for (var mme of member_member_event_pairs) {
                 if (mme[2] === null || mme[2] === e) {
@@ -385,7 +385,8 @@
                     }
                 }
             }
-
+        
+        //skills
             for (var m of team[e]) {
                 if (members_to_skill_level[m][e] !== undefined) {
                     total_skill_score += members_to_skill_level[m][e];
