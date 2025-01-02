@@ -78,3 +78,6 @@ def deleteAccountView(request):
         "form":form,
     }
     return render(request, 'users/delete_account.html', context)
+
+def algorithm(request):
+    return render(request, "users/algorithm.html")

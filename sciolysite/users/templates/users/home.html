@@ -4,51 +4,6 @@
 
 {% block bodycontent %}
 
-{% comment %} <div id="carouselExampleCaptions" class="carousel slide">
-    <div class="carousel-indicators">
-      <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-      <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="1" aria-label="Slide 2"></button>
-      <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="2" aria-label="Slide 3"></button>
-    </div>
-    <div class="carousel-inner">
-      <div class="carousel-item active">
-        <img src="{% static 'images/team_analysis.png' %}" class="d-block w-100" alt="team analysis picture">
-        <div class="carousel-caption d-none d-md-block">
-          <h5>Easy Team Analysis</h5>
-          <p>View your team's past competition results in a colorful way for simple interpretation.</p>
-        </div>
-      </div>
-      <div class="carousel-item">
-        <img src="{% static 'images/member_analysis.png' %}" class="d-block w-100" alt="member analysis">
-        <div class="carousel-caption d-none d-md-block">
-          <h5>Compare Members' Invitational Ranks</h5>
-          <p>Seperate the events by the members that participated in them for easy comparison.</p>
-        </div>
-      </div>
-      <div class="carousel-item">
-        <img src="{% static 'images/experience.png' %}" class="d-block w-100" alt="compare member experience">
-        <div class="carousel-caption d-none d-md-block">
-          <h5>Quickly Access Experience Data</h5>
-          <p>View which events people have the most experience in and the ranks people got for the events.</p>
-        </div>
-      </div>
-      <div class="carousel-item">
-        <img src="{% static 'images/skills.png' %}" class="d-block w-100" alt="compare member skills">
-        <div class="carousel-caption d-none d-md-block">
-          <h5>Quickly Access Skill Data</h5>
-          <p>View which events people have the most skill in and the ranks people got for the events.</p>
-        </div>
-      </div>
-    </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="prev">
-      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Previous</span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="next">
-      <span class="carousel-control-next-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Next</span>
-    </button>
-  </div> {% endcomment %}
 
   <div class="px-4 py-5 my-5 text-center">
     <img class="d-block mx-auto mb-4" src="{% static 'images/logo_svg.svg' %}" alt="" width="172">
@@ -59,34 +14,6 @@
       </p>
     </div>
   </div>
-
-  {% comment %} <div class="d-flex justify-content-center align-items-center">
-    <div class="d-md-flex flex-md-equal w-100" style="background-color:#ADD8E6;">
-        <!-- First Section -->
-        <div class="text-bg-dark flex-fill d-flex flex-column justify-content-center align-items-center overflow-hidden">
-            <div class="text-center" style="width: 70%; padding-bottom: 20px;">
-                <br>
-                <h5 class="h4">Easy Team Analysis</h5>
-                <p class="lead">View your team's past competition results in a colorful way for simple interpretation.</p>
-            </div>
-            <div class="bg-dark shadow-sm" style="width: 70%; height: 300px; border-radius: 21px 21px 0 0; overflow: hidden; display: flex; justify-content: center; align-items: center;">
-                <img src="{% static 'images/team_analysis.png' %}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-        </div>
-        
-        <!-- Second Section -->
-        <div class="bg-body-tertiary flex-fill d-flex flex-column justify-content-center align-items-center overflow-hidden">
-            <div class="text-center" style="width: 70%; padding-bottom: 20px;">
-                <br>
-                <h5 class="h4">Compare Past Invitational Ranks</h5>
-                <p class="lead">Separate the events by the members that participated in them for easy comparison.</p>
-            </div>
-            <div class="bg-dark shadow-sm" style="width: 70%; height: 300px; border-radius: 21px 21px 0 0; overflow: hidden; display: flex; justify-content: center; align-items: center;">
-                <img src="{% static 'images/member_analysis.png' %}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-        </div>
-    </div>
-</div> {% endcomment %}
 
 <div class="d-flex justify-content-center align-items-center">
     <div class="d-flex flex-wrap justify-content-center w-100" style="background-color:#ADD8E6;">
@@ -115,34 +42,6 @@
         </div>
     </div>
 </div>
-
-{% comment %} <div class="d-flex justify-content-center align-items-center">
-    <div class="d-md-flex flex-md-equal w-100">
-        <!-- First Section -->
-        <div class="text-bg-dark flex-fill d-flex flex-column justify-content-center align-items-center overflow-hidden">
-            <div class="text-center" style="width: 70%; padding-bottom: 20px;">
-                <br>
-                <h5 class="h4">Quickly Access Experience Data</h5>
-                <p class="lead">View which events people have the most experience in and the ranks people got for the events.</p>
-            </div>
-            <div class="bg-dark shadow-sm" style="width: 70%; height: 300px; border-radius: 21px 21px 0 0; overflow: hidden; display: flex; justify-content: center; align-items: center;">
-                <img src="{% static 'images/experience.png' %}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-        </div>
-        
-        <!-- Second Section -->
-        <div class="bg-body-tertiary flex-fill d-flex flex-column justify-content-center align-items-center overflow-hidden">
-            <div class="text-center" style="width: 70%; padding-bottom: 20px;">
-                <br>
-                <h5 class="h4">View Members' Skills</h5>
-                <p class="lead">See which events team members have the most experience with. Easily access their invitational ranks for each event.</p>
-            </div>
-            <div class="bg-dark shadow-sm" style="width: 70%; height: 300px; border-radius: 21px 21px 0 0; overflow: hidden; display: flex; justify-content: center; align-items: center;">
-                <img src="{% static 'images/skills.png' %}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
-            </div>
-        </div>
-    </div>
-</div> {% endcomment %}
 
 <div class="d-flex justify-content-center align-items-center">
     <div class="d-flex flex-wrap justify-content-center w-100">
@@ -207,12 +106,6 @@
         <iframe width="560" height="315" src="https://www.youtube.com/embed/kZFCPMuDYK8?si=ZK6Qja_RBT-JhX61" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
-{% comment %} <img style="float:left; max-width:300px;" src="{% static 'images/team_analysis.png' %}" class="d-block" alt="team analysis picture">
 
-<div>
-    <h5>Easy Team Analysis</h5>
-    <p>View your team's past competition results in a colorful way for simple interpretation.</p>
-</div>
-cool home page {% endcomment %}
-{% endblock %}
+  {% endblock %}
 

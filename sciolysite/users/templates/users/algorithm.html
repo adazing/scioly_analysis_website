@@ -1,0 +1,91 @@
+{% extends "main.html" %}
+{% load crispy_forms_tags %}
+
+{% block headercontent %}
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js"></script>
+<meta name="google" content="notranslate">
+{% endblock %}
+
+{% block bodycontent %}
+<div class="formblock">
+    <h5><b>Key</b></h5>
+    <p>
+        \(C={c_1,c_2...c_n}\): Set of competitions
+        <br>
+        \(P={p_1,p_2...p_z}\): Set of practice tests/tryouts
+        <br>
+        \(X={x_1,x_2...x_y}\): Set of instances (both practice tests/tryouts and competitions)
+        <br>
+        \( \mathcal{M_x} \): Set of all event member pairs \((e, m)\) in instance \(x\)
+        <br>
+        \( rank(e, m, c) \): rank of member \(m\) in event \(e\) in competition \(c\)
+        <br>
+        \( total\_teams(c) \): total number of teams in competition \(c\)
+        <br>
+        \( points\_scored(e, m, p) \): total number of points scored in practice test/tryout \(p\)
+        <br>
+        \( max\_points(p) \): maximum number of points a person can score on practice test/tryout \(p\)
+        <br>
+        \( experience(e, m, x) \): number of times member \(m\) had participated in event \(e\) before and during instance \(x\) (either a competition \(c\) or a practice test \(p\))
+        <br>
+        \(discovered\_experience\_rate\): A parameter optimized during the loss minimization
+    </p>
+
+    <h5><b>Problem #1:</b> Assigning Skills to Event Member pairs</h5>
+    
+    <h6><b>Event-Member Mapping</b></h6>
+    <p>
+        For each \(c \in C\) or \(p \in P\).
+        <br>
+        \(score(e, m, c)\): Normalized score for event \(e\) and member \(m\) in either a competition or practice test/tryout:
+        <br>
+        For a competition \(c\) :
+        $$score(e, m, c)=1-\frac{rank(e, m, c)}{total\_teams(c)}$$
+        <br>
+        For a practice test/tryout \(p\) :
+        $$score(e, m, p)=\frac{points\_scored(e, m, p)}{max\_points(p)}$$
+        <br>
+    </p>
+
+    <h6><b>Experience-Based Adjustments</b></h6>
+    <p>
+        Now, define the adjusted score for event \(e\) and member \(m\) during instance \(x\) (either a competition \(c\) or practice test \(p\)) as:
+        $$adj\_score(e, m, x) = score(e, m, x) - discovered\_experience\_rate \cdot experience(e, m, x)$$
+    </p>
+
+    <h6><b>Instance Weighting</b></h6>
+    <p>
+        Each instance \(x\) is associated with:
+        <ul>
+            <li>Weight \(w_x \ge 0 \), and</li>
+            <li>Bias \(b_x\)</li>
+        </ul>
+        Final adjusted score:
+        \(final\_score(e, m, x) = w_x \cdot adj\_score(e, m, x) + b_x \)
+    </p>
+
+    <h6><b>Leave-One-Out Loss Function</b></h6>
+    <p>
+        For each instance \(x_k\) left out:
+        <br>
+        <ol>
+            <li>Calculate predictions for \(final\_score(e, m, x_k)\) using scores from other competitions
+                $$ pred\_score(e, m, x_k) = \frac{1}{|X\text{ } \backslash\{x_k\}|} \sum_{x \in X\text{ } \backslash\{x_k\}} final\_score(e, m, x)$$
+            </li>
+            <li>
+                Loss for \(x_k\):
+                $$ loss(x_k) = \frac{1}{|\mathcal{M}_{x_k}|} \sum_{(e, m) \in \mathcal{M}_{x_k}} (adj\_score(e, m, x_k) - pred\_score(e, m, x_k))^2$$
+            </li>
+        </ol>
+        Total loss:
+        $$Total\_Loss = \frac{1}{|X|} \sum_{x_k \in X} loss(x_k)$$
+    </p>
+    <h6><b>Minimize the total loss with respect to:</b></h6>
+    <ul>
+        <li>\({\{w_x, b_x\}}_{x \in X} \)</li>
+        <li>\(discovered\_experience\_rate\)</li>
+        <li>Skill baseline \(s_0\) for first-time participants.</li>
+    </ul>
+
+</div>
+{% endblock %}
