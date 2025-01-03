@@ -114,9 +114,11 @@
     <p>
         \(T\): current team assignment where \(T(e)\) is the set of members assigned to event \(e\)
         <br>
-        \(M\): set of all members
+        \(A(T)\): set of unique members assigned to events on the team \(T\)
         <br>
-        \(E\): set of all events
+        \(M\): set of all available members
+        <br>
+        \(E\): set of all available events
         <br>
         \(E_3\): set of events with a maximum of 3 members (instead of the usual 2)
         <br>
@@ -142,19 +144,20 @@
         <br>
         \(min\_events\_per\_member\): minimum number of events per member
         <br>
-        \(w\): parameter that can be changed by the user, if it is 
+        \(events\_done(T, m)\): number of event member \(m\) has on team assignment \(T\)
+        <br>
+        \(w\): parameter that can be changed by the user, if it is closer to 1, then it values skill more over preferences and vice-versa.
 
     </p>
 
     <h4><b>Team Validity Constraints</b></h4>
     <p>
         <p>Define \( f(T, m, e) \) to check if adding member \( m \) to event \( e \) in team \( T \) is valid:</p>
-        <p>Define \( f(T, m, e) \) to check if adding member \( m \) to event \( e \) in team \( T \) is valid:</p>
         <ul>
             <li>
                 Event Capacity: Each event \( e \) can have at most \( k \) members, where \( k = 2 \) for standard events and \( k = 3 \) for events that explicitly allow three members.
                 \[
-                    |T[e]| < \begin{cases} 
+                    |T(e)| < \begin{cases} 
                     2 & \text{if } e \notin E_3, \\
                     3 & \text{if } e \in E_3.
                     \end{cases}
@@ -163,31 +166,37 @@
             <li>
                 Unique Assignment: A member \( m \) cannot already be assigned to event \( e \).
                 \[
-                m \notin T[e].
+                m \notin T(e).
                 \]
             </li>
             <li>
                 Maximum Events per Member: Each member \( m \) can only participate in a limited number of events, defined as \( max\_events\_per\_member \).
                 \[
-                |\{e \in E : m \in T[e]\}| < max\_events\_per\_member.
+                |\{e \in E : m \in T(e)\}| < max\_events\_per\_member.
                 \]
             </li>
             <li>
                 Maximum Build Events per Member: A member \( m \) can only participate in at most \( max\_build\_events\_per\_member \) build events \( B \).
                 \[
-                |\{e \in B : m \in T[e]\}| < max\_build\_events\_per\_member.
+                |\{e \in B : m \in T(e)\}| < max\_build\_events\_per\_member.
                 \]
             </li>
             <li>
-                Conflict-Free Scheduling: A member \( m \) cannot be assigned to events \( e_1 \) and \( e_2 \) that conflict in schedule. Define \( C(e) \) as the set of events conflicting with \( e \):
+                Conflict-Free Scheduling: A member \( m \) cannot be assigned to events \( e_1 \) and \( e_2 \) that conflict in schedule.
                 \[
-                \forall e' \in C(e), m \notin T[e'].
+                \forall e' \in C(e), m \notin T(e').
                 \]
             </li>
             <li>
-                Senior Distribution: There can be at most 7 seniors \( (s_m = 1) \) across all events in the team.
+                Max Team Size: There cannot be more than \(max\_size \) members on a team \(T\)
                 \[
-                |\{m \in M : s_m = 1, m \in T[e] \}| \leq 7.
+                |A(T)| \le max\_size
+                \]
+            </li>
+            <li>
+                Senior Constraint: There can be at most 7 seniors (where \( s(m) = 1 \)) across all events in the team.
+                \[
+                |\{m \in M : s_m = 1, m \in T(e) \}| \leq 7.
                 \]
             </li>
         </ul>
@@ -200,8 +209,52 @@
     <h4><b>Team Scoring Function</b></h4>
     <p>
         Define the team score \(S(T)\) as a combination of preference scores \(S_P\) and skill scores \(S_K\):
-        \(S_P(T)=\)
+        <ul>
+            <li>
+                Preference Score:
+                $$S_P(T)=\sum_{e \in E} \sum_{m \in T(e)} \frac{worst\_preference\_amount - P(m, e) + 1}{worst\_preference\_amount}$$
+            </li>
+            <li>
+                Skill Score:
+                $$S_K(T)=\sum_{e \in E} \sum_{m \in T(e)} S(m, e) $$
+            </li>
+            <li>
+                Required Pairs Bonus:
+                $$S_K(T)+=\sum_{(m,e) \in X} \begin{cases} 
+                10000 & \text{if } m \in T(e), \\
+                0 & \text{otherwise}.
+                \end{cases}
+                $$
+            </li>
+            <li>
+                Final Team Score:
+                $$S(T) = w \cdot S_K(T) + (1-w) \cdot S_P(T)$$
+            </li>
+        </ul>
     </p>
+    <h4><b>Optimization Problem</b></h4>
+    <ol>
+        <li>
+            Find Optimal Event Additions:
+            <br>
+            For a member \(m \in M\), evaluate all possible events \(e \in E\) that meets \(f(T, m, e) = True\). The algorithm computes:
+            $$\Delta S = S(T')-S(T)$$
+            where \(T'\) is the team configuration after adding \(m\) to \(e\). The algorithm selects \(e\) maximizing \(\Delta S\). Define this part of the algorithm as \(max_e(T, m)=e\).
+        </li>
+        <li>
+            Find Optimal Member Addition:
+            <br>
+            Start with the current team \(T\), members on the team \(A(T)\), and available members \(M\). Set \(best_score= -\infty \), T*=
+            <br>
+            
+        </li>
+        <li>
+            Make a Simple Team:
+            <br>
+            Iteratively add the member calculated from \(max_m(T)=m\) to the \(min\_events\_per\_member\) events that increase the score the most.
+            <br>
+        </li>
+    </ol>
 
 </div>
 {% endblock %}

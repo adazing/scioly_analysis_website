@@ -208,7 +208,7 @@
                 {% comment %} console.log(members_to_ranked_preferences[m]); {% endcomment %}
                 if (members_to_ranked_preferences[m].includes(e)){
                     let idx = members_to_ranked_preferences[m].indexOf(e);
-                    total_preference_score += (worst_preference_amount-idx+1)/worst_preference_amount;
+                    total_preference_score += (worst_preference_amount-idx)/worst_preference_amount;
 
                 }
             }
