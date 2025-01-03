@@ -10,10 +10,10 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url 'competitionListView' %}" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="{% url 'competitionListView' %}" id="navbarDropdown1" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Data
             </a>
-            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown1">
               <li><a class="dropdown-item" href="{% url 'competitionListView' %}">Data</a></li>
               <li><a class="dropdown-item" href="{% url 'nameChange' %}">Change Names</a></li>
               <li><a class="dropdown-item" href="{% url 'skillView' %}">Skill View</a></li>
@@ -23,19 +23,29 @@
             <a class="nav-link" href="{% url 'generatedCompetitionsListView' %}">Generation</a>
           </li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="{% url 'ConflictCheckingView' %}" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="{% url 'ConflictCheckingView' %}" id="navbarDropdown2" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Tools
             </a>
-            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown2">
               <li><a class="dropdown-item" href="{% url 'ConflictCheckingView' %}">Conflict Checking</a></li>
             </ul>
           </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown4" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              About
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown4">
+              <li><a class="dropdown-item" href="{% url 'algorithm' %}">Algorithm</a></li>
+            </ul>
+          </li>
+
           {% if user.is_authenticated %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown3" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               {{user.username}}
             </a>
-            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown3">
               <li><a class="dropdown-item" href="{% url 'passwordChangeView' %}">Change Password</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{% url 'logoutView' %}">Logout</a></li>
@@ -44,16 +54,15 @@
           </li>
           {% else %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="" id="navbarDropdown3" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Account
             </a>
-            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown3">
               <li><a class="dropdown-item" href="{% url 'loginView' %}">Login</a></li>
               <li><a class="dropdown-item" href="{% url 'signupView' %}">Sign Up</a></li>
             </ul>
           </li>
           {% endif %}
-
         </ul>
       </div>
     </div>
