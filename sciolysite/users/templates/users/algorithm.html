@@ -8,7 +8,9 @@
 
 {% block bodycontent %}
 <div class="formblock">
-    <h5><b>Key</b></h5>
+    <h2><b>Problem #1:</b> Assigning Skills to Event Member pairs</h2>
+
+    <h4><b>Key</b></h4>
     <p>
         \(C={c_1,c_2...c_n}\): Set of competitions
         <br>
@@ -28,12 +30,12 @@
         <br>
         \( experience(e, m, x) \): number of times member \(m\) had participated in event \(e\) before and during instance \(x\) (either a competition \(c\) or a practice test \(p\))
         <br>
-        \(discovered\_experience\_rate\): A parameter optimized during the loss minimization
+        \(discovered\_experience\_rate\): A parameter optimized during the loss minimization, represents the slope of the linear growth in skill as experience increases
+        <br>
+        \(adjustable\_experience\_rate\): A parameter that can be changed by the user, represents the slope of the linear growth in skill as experience increases
     </p>
-
-    <h5><b>Problem #1:</b> Assigning Skills to Event Member pairs</h5>
     
-    <h6><b>Event-Member Mapping</b></h6>
+    <h4><b>Event-Member Mapping</b></h4>
     <p>
         For each \(c \in C\) or \(p \in P\).
         <br>
@@ -47,45 +49,159 @@
         <br>
     </p>
 
-    <h6><b>Experience-Based Adjustments</b></h6>
+    <h4><b>Experience-Based Adjustments</b></h4>
     <p>
         Now, define the adjusted score for event \(e\) and member \(m\) during instance \(x\) (either a competition \(c\) or practice test \(p\)) as:
         $$adj\_score(e, m, x) = score(e, m, x) - discovered\_experience\_rate \cdot experience(e, m, x)$$
     </p>
 
-    <h6><b>Instance Weighting</b></h6>
+    <h4><b>Instance Weighting</b></h4>
     <p>
         Each instance \(x\) is associated with:
         <ul>
-            <li>Weight \(w_x \ge 0 \), and</li>
+            <li>Weight \(w_x > 0 \), and</li>
             <li>Bias \(b_x\)</li>
         </ul>
         Final adjusted score:
         \(final\_score(e, m, x) = w_x \cdot adj\_score(e, m, x) + b_x \)
     </p>
 
-    <h6><b>Leave-One-Out Loss Function</b></h6>
+    <h4><b>Leave-One-Out Loss Function</b></h4>
     <p>
         For each instance \(x_k\) left out:
         <br>
         <ol>
-            <li>Calculate predictions for \(final\_score(e, m, x_k)\) using scores from other competitions
-                $$ pred\_score(e, m, x_k) = \frac{1}{|X\text{ } \backslash\{x_k\}|} \sum_{x \in X\text{ } \backslash\{x_k\}} final\_score(e, m, x)$$
+            <li>Calculate predictions using scores from other competitions
+                $$ pred\_final\_score(e, m, x_k) = \frac{1}{|X\text{ } \backslash\{x_k\}|} \sum_{x \in X\text{ } \backslash\{x_k\}} final\_score(e, m, x)$$
+                $$ \text{of if } X\text{ } \backslash\{x_k\} =\emptyset \text{ , then } pred\_final\_score(e, m, x_k) = 0$$
+                $$ pred\_adj\_score(e, m, x_k) = \frac{pred\_final\_score(e, m, x_k) - b_{x_k}}{w_{x_k}}$$
+                $$ pred\_score(e, m, x_k) = pred\_adj\_score(e, m, x_k) + discovered\_experience\_rate \cdot experience(e, m, x_k)$$
+
             </li>
             <li>
                 Loss for \(x_k\):
-                $$ loss(x_k) = \frac{1}{|\mathcal{M}_{x_k}|} \sum_{(e, m) \in \mathcal{M}_{x_k}} (adj\_score(e, m, x_k) - pred\_score(e, m, x_k))^2$$
+                $$ loss(x_k) = \frac{1}{|\mathcal{M}_{x_k}|} \sum_{(e, m) \in \mathcal{M}_{x_k}} (score(e, m, x_k) - pred\_score(e, m, x_k))^2$$
             </li>
         </ol>
         Total loss:
         $$Total\_Loss = \frac{1}{|X|} \sum_{x_k \in X} loss(x_k)$$
     </p>
-    <h6><b>Minimize the total loss with respect to:</b></h6>
-    <ul>
-        <li>\({\{w_x, b_x\}}_{x \in X} \)</li>
-        <li>\(discovered\_experience\_rate\)</li>
-        <li>Skill baseline \(s_0\) for first-time participants.</li>
-    </ul>
+
+    <h4><b>Minimize the Total Loss with Respect to:</b></h4>
+    <p>
+        <ul>
+            <li>\({\{w_x, b_x\}}_{x \in X} \)</li>
+            <li>\(discovered\_experience\_rate\)</li>
+            <li>\(s_0\)</li>
+        </ul>
+    </p>
+
+    <h4><b>Calculating Outputs</b></h4>
+    <p>
+        <ul>
+            <li>instances without overlapping event, member pairs \((e, m)\) are given the average weight (\(w_{avg}\)) and bias (\(b_{avg}\)) of the other instances with overlapping pairs</li>
+            <li>Each member's skill is incrementally updated based on their event performance
+                $$pred\_final\_score(e, m, x_{y+1})= \frac{1}{|X|} \sum_{x \in X} final_score(e, m, x)$$
+                $$pred\_adj\_score(e, m, x_{y+1})=\frac{pred\_final\_score(e, m, x_{y+1}) - b_{avg}}{w_{avg}}$$
+                $$pred\_score(e, m, x_{y+1})= pred\_adj\_score(e, m, x_{y+1}) + adjustable\_experience\_rate \cdot experience(e, m, x_{y+1}) $$
+            </li>
+            <li>Scale the predicted scores appropriately.</li>
+        </ul>
+    </p>
+
+    <h2><b>Problem #2:</b> Generating Teams</h2>
+    <h4><b>Key</b></h4>
+    <p>
+        \(T\): current team assignment where \(T(e)\) is the set of members assigned to event \(e\)
+        <br>
+        \(M\): set of all members
+        <br>
+        \(E\): set of all events
+        <br>
+        \(E_3\): set of events with a maximum of 3 members (instead of the usual 2)
+        <br>
+        \(worst\_preference\_amount \): maximum number of preferred events any member listed
+        <br>
+        \(P(m,e)\): rank of preference member \(m\) listed for event \(e\), if it is not listen then it is \(worst\_preference\_amount + 1\) (ex. if Mary has Astronomy as 1st preference, then \(P(Mary, Astronomy)=1\) )
+        <br>
+        \(S(m, e)\): skill score of member \(m\) in event \(e\) (covered in the previous section)
+        <br>
+        \(X\): set of pairwise member-event \((m, e)\) constraints, where member \(m\) must be placed on event \(e\)
+        <br>
+        \(C(e)\): set of events conflicting with event \(e\)
+        <br>
+        \(B\): set of build events
+        <br>
+        \(s(m)\): boolean indicator if member \(m\) is a senior
+        <br>
+        \(max\_size\): maximum team size
+        <br>
+        \(max\_events\_per\_member\): maximum number of events per member
+        <br>
+        \(max\_build\_events\_per\_member\): maximum number of build events per member
+        <br>
+        \(min\_events\_per\_member\): minimum number of events per member
+        <br>
+        \(w\): parameter that can be changed by the user, if it is 
+
+    </p>
+
+    <h4><b>Team Validity Constraints</b></h4>
+    <p>
+        <p>Define \( f(T, m, e) \) to check if adding member \( m \) to event \( e \) in team \( T \) is valid:</p>
+        <p>Define \( f(T, m, e) \) to check if adding member \( m \) to event \( e \) in team \( T \) is valid:</p>
+        <ul>
+            <li>
+                Event Capacity: Each event \( e \) can have at most \( k \) members, where \( k = 2 \) for standard events and \( k = 3 \) for events that explicitly allow three members.
+                \[
+                    |T[e]| < \begin{cases} 
+                    2 & \text{if } e \notin E_3, \\
+                    3 & \text{if } e \in E_3.
+                    \end{cases}
+                \]
+            </li>
+            <li>
+                Unique Assignment: A member \( m \) cannot already be assigned to event \( e \).
+                \[
+                m \notin T[e].
+                \]
+            </li>
+            <li>
+                Maximum Events per Member: Each member \( m \) can only participate in a limited number of events, defined as \( max\_events\_per\_member \).
+                \[
+                |\{e \in E : m \in T[e]\}| < max\_events\_per\_member.
+                \]
+            </li>
+            <li>
+                Maximum Build Events per Member: A member \( m \) can only participate in at most \( max\_build\_events\_per\_member \) build events \( B \).
+                \[
+                |\{e \in B : m \in T[e]\}| < max\_build\_events\_per\_member.
+                \]
+            </li>
+            <li>
+                Conflict-Free Scheduling: A member \( m \) cannot be assigned to events \( e_1 \) and \( e_2 \) that conflict in schedule. Define \( C(e) \) as the set of events conflicting with \( e \):
+                \[
+                \forall e' \in C(e), m \notin T[e'].
+                \]
+            </li>
+            <li>
+                Senior Distribution: There can be at most 7 seniors \( (s_m = 1) \) across all events in the team.
+                \[
+                |\{m \in M : s_m = 1, m \in T[e] \}| \leq 7.
+                \]
+            </li>
+        </ul>
+        Validity Check: To check if assigning \( m \) to \( e \) is valid, evaluate:
+        \[
+        f(T, m, e) = \text{True if all constraints above are satisfied, False otherwise.}
+        \]
+    </p>
+
+    <h4><b>Team Scoring Function</b></h4>
+    <p>
+        Define the team score \(S(T)\) as a combination of preference scores \(S_P\) and skill scores \(S_K\):
+        \(S_P(T)=\)
+    </p>
 
 </div>
 {% endblock %}

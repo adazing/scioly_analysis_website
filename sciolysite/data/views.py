@@ -309,7 +309,8 @@ def skillView2(request):
         discovered_experience_rate = abs(params[-2])
         # discovered_experience_rate = skill_data.experience_rate
         # discovered_experience_rate = 0
-        skill_no_exp = abs(params[-1])
+        # skill_no_exp = abs(params[-1])
+        skill_no_exp = 0
         total_loss = 0
         for c1 in range(num_competitions): # comp to leave out
             total_comp_loss = 0

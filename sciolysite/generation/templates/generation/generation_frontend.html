@@ -35,7 +35,6 @@
     };
 
     function is_valid_team_addition(val_event, val_member, val_team, team_size, max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events, seniors) {
-        {% comment %} console.log("check") {% endcomment %}
         var events_done_by_member = Object.keys(val_team).filter(function(e) {
             return val_team[e].includes(val_member);
         });
@@ -43,23 +42,18 @@
         
         // already enough events for the member
         if (events_done_by_member.length >= max_events_per_member) {
-            {% comment %} console.log(1); {% endcomment %}
             return false;
         }
         // member is already in the event
         else if (val_team[val_event].includes(val_member)) {
-            {% comment %} console.log(2); {% endcomment %}
             return false;
         }
         // there is already enough members in the event
         else if (val_team[val_event].length >= 2 + (events_with_3_members.includes(val_event) ? 1 : 0)) {
-            {% comment %} console.log(3); {% endcomment %}
-            {% comment %} console.log(val_team[val_event]); {% endcomment %}
             return false;
         }
         // new member would cause the team to go over the size limit
         else if (members_on_team.size + 1 > team_size && !members_on_team.has(val_member)) {
-            {% comment %} console.log(5); {% endcomment %}
             return false;
         }
         
@@ -68,7 +62,6 @@
             if (events_done_by_member.filter(function(e) {
                 return build_events.includes(e);
             }).length >= max_num_of_build_events_per_member) {
-                {% comment %} console.log(4); {% endcomment %}
                 return false;
             }
         }
@@ -83,30 +76,10 @@
                     conflicts[index] += 1;
                 }
                 if (conflicts[index]>1){
-                    {% comment %} console.log(6); {% endcomment %}
                     return false;
                 }
             }
         }
-        {% comment %} events_done_by_member.forEach(function(e) {
-            conflicting_events.forEach(function(c, index) {
-                if (c.includes(e)) {
-                    console.log("hiier434");
-                    console.log(index)
-                    console.log(conflicts[index])
-                    conflicts[index] += 1;
-                    console.log(conflicts[index])
-                    console.log(c);
-                    console.log(events_done_by_member);
-                    console.log(conflicts);
-                    console.log(e);
-                }
-                if (conflicts[index]>1){
-                    return false;
-                }
-            });
-        });
-         {% endcomment %}
 
         if (seniors.includes(val_member) && !members_on_team.has(val_member)){
             let curr_seniors_on_team = [];
@@ -115,7 +88,6 @@
                     if (seniors.includes(m) && !curr_seniors_on_team.includes(m)){
                         curr_seniors_on_team.push(m);
                         if (curr_seniors_on_team.length >= 7){
-                            {% comment %} console.log(7); {% endcomment %}
                             return false;
                         }
                     }
@@ -126,73 +98,6 @@
         return true;
     }
 
-
-    {% comment %} function improve_teams(teams, team_members_list, members_to_skill_level, members_to_ranked_preferences, min_events_per_member, teams_list, events_with_3_members, member_member_event_pairs, worst_preference_amount, members_to_experience, build_events, required_member_event_pairs, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, event_types, skill_vs_preferences) {
-        var result = [];
-        for (var t = 0; t < teams_list.length; t++) {
-            var members_to_events = {};
-            for (var m = 0; m < team_members_list[t].length; m++) {
-                var m0 = team_members_list[t][m];
-                members_to_events[m0] = [];
-                for (var e in teams_list[t]) {
-                    if (teams_list[t][e].includes(m0)) {
-                        members_to_events[m0].push(e);
-                    }
-                }
-            }
-            var best_team = JSON.parse(JSON.stringify(teams_list[t]));
-            var best_score = Infinity;
-            var done_member_switches = [];
-            for (var m0_idx = 0; m0_idx < team_members_list[t].length; m0_idx++) {
-                let m0 = team_members_list[t][m0_idx];
-                var orig_team = JSON.parse(JSON.stringify(best_team));
-                members_to_events = {};
-                for (var m = 0; m < team_members_list[t].length; m++) {
-                    var m1 = team_members_list[t][m];
-                    members_to_events[m1] = [];
-                    for (var e in orig_team) {
-                        if (orig_team[e].includes(m1)) {
-                            members_to_events[m1].push(e);
-                        }
-                    }
-                }
-                for (var m1_idx = 0; m1_idx < team_members_list[t].length; m1_idx++) {
-                    let m1 = team_members_list[t][m1_idx];
-                    if (m0 != m1 && !done_member_switches.includes([m0, m1]) && !done_member_switches.includes([m1, m0])) {
-                        done_member_switches.push([m0, m1]);
-                        for (var e0 of members_to_events[m0]) {
-                            for (var e1 of members_to_events[m1]) {
-                                if (e0 != e1) {
-                                    var temp_team = JSON.parse(JSON.stringify(orig_team));
-                                    var index = temp_team[e0].indexOf(m0);
-                                    if (index > -1) {
-                                        temp_team[e0].splice(index, 1);
-                                    }
-                                    if (is_valid_team_addition(e0, m1, temp_team, teams[t], max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
-                                        temp_team[e0].push(m1);
-                                        var index = temp_team[e1].indexOf(m1);
-                                        if (index > -1) {
-                                            temp_team[e1].splice(index, 1);
-                                        }
-                                        if (is_valid_team_addition(e1, m0, temp_team, teams[t], max_events_per_member, max_num_of_build_events_per_member, events_with_3_members, build_events, conflicting_events)) {
-                                            temp_team[e1].push(m0);
-                                            var team_score = calculate_preferences_score(temp_team, team_members_list[t], members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences);
-                                            if (team_score < best_score) {
-                                                best_score = team_score;
-                                                best_team = JSON.parse(JSON.stringify(temp_team));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            result.push(best_team);
-        }
-        return result;
-    } {% endcomment %}
 
 
     let pastel_colors = ["FFE9D0", "FFFED3", "BBE9FF", "B1AFFF", "E7F0DC", "E7D4B5", "EF9C66", "C8CFA0", "E1ACAC", "E1AFD1", "E493B3"];
@@ -231,7 +136,6 @@
             let team_name = document.createTextNode(team_names[idx]);
             team_name_h1.appendChild(team_name);
             let generated_table = document.createElement("table");
-            {% comment %} generated_table.style.border = "1px solid black"; {% endcomment %}
             generated_table.classList.add("table");
             generated_table.classList.add("table-hover");
             //console.log(teams_list[team]);
@@ -292,70 +196,6 @@
     function deep_copy(team){
         return JSON.parse(JSON.stringify(team));
     }
-
-    {% comment %} function calculate_preferences_score(team, team_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences) {
-        var empty_spots = Object.keys(team).map(function (e) {
-            return 2 - team[e].length + (events_with_3_members.includes(e) ? 1 : 0);
-        });
-        //console.log("hi");
-        //console.log(team);
-        //console.log(required_member_event_pairs);
-        
-        var required_member_event_preferences_not_yet_fulfilled = required_member_event_pairs.filter(function (me) {
-            return !team[me[1]].includes(me[0]);
-        });
-        var total_preference_score = 0;
-        var total_skill_score = 0;
-    
-        for (var e in team) {
-            for (var mme of member_member_event_pairs) {
-                if (mme[2] === null || mme[2] === e) {
-                    if ((new Set([mme[0], mme[1]])).isSubsetOf(new Set(team[e]))) {
-                        total_preference_score -= worst_preference_amount;
-                    } else if (team[e].length < 2 + (events_with_3_members.includes(e) ? 1 : 0) && (team[e].includes(mme[0]) || team[e].includes(mme[1])) && new Set([mme[0], mme[1]]).isSubsetOf(new Set(team_members)) && members_to_ranked_preferences[mme[0]].includes(mme[2]) && members_to_ranked_preferences[mme[1]].includes(mme[2])) {
-                        total_preference_score -= worst_preference_amount * 0.5;
-                    }
-                }
-            }
-            for (var m of team[e]) {
-                // member wants the event
-                if (members_to_ranked_preferences[m].includes(e)) {
-                    //add preference score
-                    total_preference_score += members_to_ranked_preferences[m].indexOf(e);
-                    //decrese skill score, more likely to get if are better overall
-                    total_skill_score -= 1 - (team_members.indexOf(m) / team_members.length);
-                } else {
-                    //look for similar events to waants
-                    var total_num_of_similar_events = 0;
-                    for (var wanted_e of members_to_ranked_preferences[m]) {
-                        for (var et of event_types) {
-                            if (e.includes(et) && wanted_e.includes(et)) {
-                                total_num_of_similar_events += 1;
-                            }
-                        }
-                    }
-                    // more likely to get similar events to wants
-                    if (members_to_ranked_preferences[m].length !== 0) {
-                        total_preference_score += worst_preference_amount*3 - total_num_of_similar_events / members_to_ranked_preferences[m].length;
-                    } else {
-                        total_preference_score += worst_preference_amount*3;
-                    }
-                }
-                total_skill_score -= members_to_skill_level[m][e];
-            }
-        }
-        console.log(total_preference_score);
-        return (
-            total_preference_score * (1 - skill_vs_preferences) +
-            total_skill_score * skill_vs_preferences +
-            empty_spots.reduce(function (a, b) {
-                return a + b;
-            }, 0) *
-                10000 +
-            required_member_event_preferences_not_yet_fulfilled.length * 1000
-        );
-    } {% endcomment %}
-
 
     function calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score) {
         var total_skill_score = 0;

@@ -70,6 +70,8 @@ class CompetitionSettingsForm(ModelForm):
         ]
         labels= {
             "name":"Name of upcoming competition",
+            "skill_vs_preferences": "Value of Skill Over Preferences",
+
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
@@ -315,6 +317,7 @@ class CompetitionSettingsEditForm(ModelForm):
         ]
         labels= {
             "name":"Name of upcoming competition",
+            "skill_vs_preferences": "Value of Skill Over Preferences",
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),

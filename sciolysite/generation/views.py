@@ -362,7 +362,8 @@ def frontend_generate(request, pk):
     no_matches_comps = set()
     def custom_loss(params): # calculates math to minimize
         discovered_experience_rate = abs(params[-2])
-        skill_no_exp = abs(params[-1])
+        # skill_no_exp = abs(params[-1])
+        skill_no_exp = 0
         total_loss = 0
         for c1 in range(num_competitions): # comp to leave out
             total_comp_loss = 0
