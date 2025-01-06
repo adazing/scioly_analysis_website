@@ -61,7 +61,7 @@ class EventMemberPracticeInstance(models.Model):
 
 class SkillData(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    experience_rate = models.FloatField(default = 0.1)
+    experience_rate = models.FloatField(default = 0.5)
     start_date = models.DateField(default = date(date.today().year, 8, 1))
     end_date = models.DateField(default = date(date.today().year + 1, 8, 1))
 # class SkillDataVal(models.Model)

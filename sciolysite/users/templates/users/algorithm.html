@@ -13,47 +13,22 @@
         We form an estimate of the skill of each member in each event. This estimate has several free parameters, which we set via leave-one-out cross-validation. The resulting skills are then used to assemble a team with a high predicted capability while satisfying preferences.
     </p>
 
-
-    {% comment %} <h4>Key</h4>
-    <p>
-        \(C={c_1,c_2...c_n}\): Set of competitions
-        <br>
-        \(P={p_1,p_2...p_z}\): Set of practice tests/tryouts
-        <br>
-        \(X={x_1,x_2...x_y}\): Set of instances (both practice tests/tryouts and competitions)
-        <br>
-        \( \mathcal{M}_x \): Set of all event member pairs \((m, e)\) in instance \(x\)
-        <br>
-        \( rank(m, e, c) \): rank of member \(m\) in event \(e\) in competition \(c\)
-        <br>
-        \( total\_teams(c) \): total number of teams in competition \(c\)
-        <br>
-        \( points\_scored(m, e, p) \): total number of points scored in practice test/tryout \(p\)
-        <br>
-        \( max\_points(p) \): maximum number of points a person can score on practice test/tryout \(p\)
-        <br>
-        \( experience(m, e, x) \): number of times member \(m\) had participated in event \(e\) before and during instance \(x\) (either a competition \(c\) or a practice test \(p\))
-        <br>
-        \(discovered\_experience\_rate\): A parameter optimized during the loss minimization, represents the slope of the linear growth in skill as experience increases
-        <br>
-        \(adjustable\_experience\_rate\): A parameter that can be changed by the user, represents the slope of the linear growth in skill as experience increases
-    </p> {% endcomment %}
     <h1><b>Estimating Skills for Members on Events</b></h1>
     <p>
-        There are four steps to estimating skills. In the first step, we compute a raw skill based on event data from past ranks or scores from competitions or practice tests. In the second step, we adjust skills to factor in the difference of difficulty between practice tests and/or competitions. In the third step, we use leave-one-out cross-validation to set the free parameters that are necessary to calculate adjusted skills. In the fourth step, we calculate the outputs to be displayed to the user.
+        There are four steps to estimating skills. In the first step, we compute a skill observation based on event data from past ranks or scores from competitions or practice tests. In the second step, we adjust skill observations to factor in the difference in difficulty between practice tests and/or competitions. In the third step, we use leave-one-out cross-validation to set the free parameters that are necessary to calculate adjusted skill observations. In the fourth step, we calculate the skill estimates to be displayed to the user.
     </p>
-    <h4>Step 1: Raw Skill</h4>
-    <p>We do an initial processing of the ranks from past competition data and the scores of practice test data.</p>
+    <h4>Step 1: Skill Observations</h4>
+    <p>We process the ranks from past competition data and the scores of practice test data to create skill observations.</p>
     <p>
-        For each member \(m\), event \(e\), and competition \(c\), let the raw skill be:
+        For each member \(m\), event \(e\), and competition \(c\), let the skill observation be:
         <br>
         $$s_{m e c}=1-\frac{r_{m e c}}{t_{c}}$$
         where \(r_{m e c}\) is the observed rank member \(m\) got in event \(e\) for competition \(c\) and \(t_c\) is the total number of teams in competition \(c\).
         <br>
         <br>
-        Similarly, for each member \(m\), event \(e\), and practice test \(p\), let the raw skill be: 
+        Similarly, for each member \(m\), event \(e\), and practice test \(p\), let the skill observation be: 
         $$s_{m e p}=\frac{g_{m e p}}{t_{e p}}$$
-        where \(g_{m e p}\) is the number of points \(m\) got for event \(e\) for practice test \(p\) and \(t_{e p}\) is the maximum number of points a member could get for practice test \(p\) in event \(e\).
+        where \(g_{m e p}\) is the grade in points that \(m\) got for event \(e\) for practice test \(p\) and \(t_{e p}\) is the maximum number of points a member could get for practice test \(p\) in event \(e\).
         <br>
         <br>
         Let \(X_{m e}=\{x_1,x_2...x_n\}\) be the set of competitions \(c\) and practice tests \(p\) where member \(m\) participated in event \(e\) and let \(X=\{x_1,x_2...x_n\}\) be the set of all competitions \(c\) and practice tests \(p\).
@@ -63,11 +38,11 @@
 
 
     <h4>Step 2: Skill Observation Adjustments</h4>
-    <p>To factor in the difference of difficulty between practice tests and/or competitions when determining skill, we use free parameters to adjust raw skills.</p>
+    <p>To factor in the difference of difficulty between practice tests and/or competitions when estimating skill, we use free parameters to adjust skill observations.</p>
     <p>
         Each competition \(c\) or practice test \(p\) has a weight \( 0 < w_x < 1 \) and a bias \( -1 < b_x <1 \).
         <br>
-        The final estimated observed skill is:
+        The final adjusted observed skill is:
         \(f_{m e x} = w_x \cdot s_{m e x} + b_x \)
     </p>
 
@@ -78,8 +53,8 @@
     </p>
     <p>
         <ol>
-            <li>If \(|X_{m e}\text{ } \backslash\{x_k\}| =0\), then \(\widehat{f_{m e x_k}}=a \), where \(0< a <1\) is the initial skill with no experience.</li>
-            <li>Otherwise, for each instance \(x_k\) left out, we calculate predictions of all observed skills \(\widehat{s_{m e x_k}}\) by averaging the final estimated observed skill of the other competitions and converting to the original normalized skill.
+            <li>If \(|X_{m e}\text{ } \backslash\{x_k\}| =0\), then \(\widehat{f_{m e x_k}}=a \), where \(0< a <1\) is the initial adjusted observed skill with no experience.</li>
+            <li>Otherwise, for each instance \(x_k\) left out, we calculate predictions of all observed skills \(\widehat{s_{m e x_k}}\) by averaging the adjusted observed skills of the other competitions and practice tests and converting the average to the estimated skill observation.
                 $$ \widehat{f_{m e x_k}} = \frac{1}{|X_{m e}\text{ } \backslash\{x_k\}|} \sum_{x \in X_{m e}\text{ } \backslash\{x_k\}} f_{m e x}$$
                 $$ \widehat{s_{m e x_k}} = \frac{\widehat{f_{m e x_k}} - b_{x_k}}{w_{x_k}}$$
                 {% comment %} $$ pred\_score(m, e, x_k) = pred\_adj\_score(m, e, x_k) + discovered\_experience\_rate \cdot experience(m, e, x_k)$$ {% endcomment %}
@@ -93,32 +68,32 @@
                 $$L = \frac{1}{|X|} \sum_{x_k \in X} L_{x_k}$$
             </li>
             <li>
-                Minimize the total loss with respect to \({\{w_x, b_x\}}_{x \in X} \) and \(a\).
+                We minimize the total loss with respect to \({\{w_x, b_x\}}_{x \in X} \) and \(a\) using SciPy's optimize.minimize function.
             </li>
         </ol>
     </p>
     <h4>Step 4: Calculating Outputs</h4>
-    <p>Using the weights and biases calculated from the previous step, we compute the skill scores to be displayed to the user.</p>
+    <p>Using the weights and biases calculated from the previous step, we compute the skill estimates which are displayed.</p>
     <p>
         <ul>
             <li>Competition or practice tests instances without overlapping member-event pairs \((m, e)\) are given the average weight (\(w_{avg}\)) and bias (\(b_{avg}\)) of the other instances that do have overlapping pairs. If there are no instances with overlapping pairs, \(w_{avg}\) is set to \(0.5\) and \(b_{avg}\) is set to \(0\).</li>
-            <li>We then predict the next competitions observed skill score from the past observed skill scores:
+            <li>We then predict the next competition or practice tests' adjusted skill observation from the other competition or practice test adjusted skill observations:
                 $$\widehat{f_{m e x_{n+1}}}= \frac{1}{|X_{m e}|} \sum_{x \in X} f_{m e x}$$
-                Or if there are no past data on an \((m, e)\) pair, then we let \(\widehat{f_{m e x_{n+1}}}=a\).
+                Or if there are no other data on an \((m, e)\) pair, then we let \(\widehat{f_{m e x_{n+1}}}=a\).
                 $$\widehat{s_{m e x_{n+1}}}=\frac{\widehat{f_{m e x_{n+1}}} - b_{avg}}{w_{avg}}$$
             </li>
-            <li>We then attempt to add an experience factor that gives members with more experience better skill scores and prevent members who were carried during one or two competitions to get relatively high skill scores. Let \( 0 < P < 5 \) be a parameter that a user can specify, which indicates the slope of the linear increase in skill relative to experience. Let \(E_{m e}\) represent the number of competitions or practice tests member \(m\) participated in event \(e\) in total in the past.
-                $$\widehat{s_{m e x_{n+1}}}=\widehat{s_{m e x_{n+1}}}+P\cdot E_{m e}$$
+            <li>We then attempt to add an experience factor that gives members with more experience better estimated skill and prevents members who were carried during one or two competitions to get relatively high skill scores. Let \( 0 < P < 1 \) be a parameter that a user can specify, which indicates the slope of the linear increase in skill relative to experience. Let \(E_{m e}\) represent the number of competitions or practice tests member \(m\) participated in event \(e\) in total in the past.
+                $$\widehat{(s_{m e x_{n+1}})'}=\widehat{s_{m e x_{n+1}}}+P\cdot E_{m e}$$
             </li>
-            <li>Let \(S\) represent the set of all \(\widehat{s_{m e x_{n+1}}}\) for \(\forall (m, e) \in \mathcal{M}_{x} \forall x \in X \) We then calculate \(s_{U} = max{S}\) and \(s_{u} = min{S}\) and scale every skill from \(0\) and \(1\):
-            $$\widehat{s_{m e x_{n+1}}}=\frac{\widehat{s_{m e x_{n+1}}}-s_{u}}{s_{U}-s_{u}}$$
+            <li>Let \(S\) represent the set of all \(\widehat{(s_{m e x_{n+1}})'}\) for \(\forall (m, e) \in \mathcal{M}_{x} \forall x \in X \) We then calculate \(s_{U} = \max{S}\) and \(s_{u} = \min{S}\) and scale every skill from \(0\) and \(1\):
+            $$\widehat{(s_{m e x_{n+1}})''}=\frac{\widehat{(s_{m e x_{n+1}})'}-s_{u}}{s_{U}-s_{u}}$$
             </li>
         </ul>
     </p>
-
+    <p>\(\widehat{(s_{m e x_{n+1}})''}\) represents the skill estimates for any next competition/practice test for a member \(m\) in an event \(e\).</p>
 
     <h1><b>Generating Teams</b></h1>
-    <p>There are multiple steps to generating teams. In the first step, we define restrictions for adding a member to a particular event on a team. In the second step, we define the team score function which describes how good a team is in terms of both preferences and skill. In the third step, we generate teams that maximize the score function.</p>
+    <p>There are multiple steps to generating teams. In the first step, we define restrictions for adding a member to a particular event on a team. In the second step, we define the team score function which describes how good a team is in terms of both preferences and skill. In the third step, we generate teams that maximize the team score.</p>
     {% comment %} <h4>Key</h4>
     <p>
         \(T\): current team assignment where \(T(e)\) is the set of members assigned to event \(e\)
@@ -191,7 +166,7 @@
                 \]
             </li>
             <li>
-                Maximum Build Events per Member: A member \( m \) can only participate in at most \( o_B \) events that are in the set of all build events \( B \).
+                Maximum Build Events per Member: A member \( m \) can only participate in at most \( o_B \) events in the set of all build events \( B \).
                 \[
                 |\{e \in B : m \in T_e\}| < o_B
                 \]
@@ -224,7 +199,7 @@
 
     <h4>Step 2: Team Scoring Function</h4>
     <p>
-        Define the function \(h(T)\) to score how good a team \(T\) is, as a combination of preference scores \(h_p(T)\) and skill scores \(h_s(T)\):
+        Define the function \(h(T)\) to score how good a team \(T\) is, as a combination of preference scores, skill scores, partner preferences, and required members on specific events.
         <br>
         <ul>
             <li>
@@ -233,24 +208,24 @@
                 Let \(d\) represent the maximum number of preferred events any member listed.
                 <br>
                 Let \(p_{me}\) represent the preference rank member \(m\) listed for event \(e\). If member \(m\) didn't list \(e\) at all when listing preferences then \(p_{m e}=d+1\).
-                $$h_p(T)=\sum_{e \in E} \sum_{m \in T_e} \frac{d - p_{m e} + 1}{d}$$
+                $$h_P(T)=\sum_{e \in E} \sum_{m \in T_e} \frac{d - p_{m e} + 1}{d}$$
             </li>
             <li>
                 Skill Score:
-                $$h_s(T)=\sum_{e \in E} \sum_{m \in T_e} \widehat{s_{m e x_{n+1}}} $$
+                $$h_S(T)=\sum_{e \in E} \sum_{m \in T_e} (\widehat{s_{m e x_{n+1}}})'' $$
             </li>
             <li>
                 Partner Preferences Bonus:
                 <br>
                 Let \(Y\) represent the set of user-specified member-member-event triples \((m_1, m_2, e)\), which means members \(m_1\) and \(m_2\) want to be partners for event \(e\). If event \(e\) for members \(m_1\) and \(m_2\) is not specified originally, then it is equivalent to making the triples \((m_1, m_2, e) \forall e \in E \).
-                $$h_s(T)+=\sum_{e \in E} \sum_{(m_1, m_2, e) \in Y} I(m_1 \in T_e \land m_2 \in T_e)$$
+                $$h_M(T)=\sum_{e \in E} \sum_{(m_1, m_2, e) \in Y} I(m_1 \in T_e \land m_2 \in T_e)$$
                 (\(I\) is the indicator function, which returns \(0\) if the boolean expression is \(False\) and \(1\) if it is \(True\))
             </li>
             <li>
                 Required Pairs Bonus:
                 <br>
                 Let \(K\) represent the set of user-specified required member-event pairs \((m, e)\) that require member \(m\) to be on event \(e\).
-                $$h_s(T)+=\sum_{(m,e) \in K} \begin{cases}
+                $$h_K(T)=\sum_{(m,e) \in K} \begin{cases}
                 10000 & \text{if } m \in T(e), \\
                 0 & \text{otherwise}
                 \end{cases}
@@ -260,7 +235,7 @@
                 Final Team Score:
                 <br>
                 Let \(0 < w < 1\) represent the parameter that can be changed by the user. If \(w\) is closer to \(1\), then the algorithm values skill more over preferences and if \(w\) is closer to \(0\), then it values preferences more over skill.
-                $$h(T) = w \cdot h_s(T) + (1-w) \cdot h_p(T)$$
+                $$h(T) = w \cdot h_S(T) + (1-w) \cdot (h_P(T)+h_M(T)) + h_K(T)$$
             </li>
         </ul>
     </p>
@@ -277,13 +252,13 @@
             <ul>
                 <li>For a member \(m \in M\), iterate over all \(e \in E\)
                     <ul>
-                        <li>if \(v(T, m, e)=True\), create \(T'\), which has member \(m\) added to \(T_e\).</li>
+                        <li>if \(v(T, m, e)=True\), create \(T'\), which has member \(m\) added to \(T_e\). Then, define \(\Delta h = h(T') - h(T)\).</li>
                         <li>if \(v(T, m, e)=False\), iterate over all members \(m_o \in T_e, m_o \ne m \):
                             <ul>
-                                <li>If \(|T_m| > o_{\gamma} \): Define a \(T'\), which has \(m_o\) removed from \(T_e\). If \(f(T', m, e)=True\), then add member \(m\) to \(T'_e\).
+                                <li>If \(|T_m| > o_{\gamma} \): Define a \(T'\), which has \(m_o\) removed from \(T_e\). If \(f(T', m, e)=True\), then define a \(T''\), which has member \(m\) added to \(T'_e\).
                                     <ul>
-                                        <li>If \(z=False\), then consider replacing \(m_o\) with \(m\) in \(T_e\) as valid only if \(h(T)-h(T') \ge 0\)</li>
-                                        <li>Otherwise, always consider replacing \(m_o\) with \(m\) in \(T(e)\) as valid (even when \(h(T)-h(T') < 0\))</li>
+                                        <li>If \(z=False\), then consider replacing \(m_o\) with \(m\) in \(T_e\) as valid only if \(\Delta h = h(T'')-h(T') \ge 0\)</li>
+                                        <li>Otherwise, always consider replacing \(m_o\) with \(m\) in \(T(e)\) as valid (even when \(\Delta h = h(T'')-h(T') < 0\))</li>
                                     </ul>
                                 </li>
                             </ul>
@@ -291,7 +266,7 @@
                     </ul>
                 </li>
             </ul>
-            The output of \(j_E(T, m, z)=T^*\), where \(T^*\) is the \(T'\) (team with event addition or member replacement) which maximizes \(h(T')\).
+            The output of \(j_E(T, m, z)=T^*\), where \(T^*\) is the team which maximizes \(\Delta h\) by adding an event to a member. If there are no valid event additions for member \(m\), it just returns the original team \(T\).
         </li>
         <li>
             <b>Find Optimal Member Addition:</b>
@@ -303,11 +278,11 @@
                     <ul>
                         <li>Let \(T^@\) be a copy of \(T\)</li>
                         <li>
-                            Repeat until \(T^@_m==o_{\gamma} \):
+                            Repeat \(o_{\gamma} \) times:
                             <ul>
                                 <li>\(T^@=j_E(T^@, m, True)\)</li>
                             </ul>
-                            Repeat until \(T^@_m==o_{\Gamma}\):
+                            Repeat \(o_{\Gamma} - o_{\gamma}\) times:
                             <ul>
                                 <li>If possible, \(T^@=j_E(T^@, m, False)\)</li>
                             </ul>
@@ -315,7 +290,7 @@
                     </ul>
                 </li>
             </ul>
-            The output of \(j_M(T, M_j)=T^\#\), where \(T^\#\) is the \(T^@\) (team with member addition) which maximizes \(h(T^@)\).
+            The output of \(j_M(T, M_j)=T^\#\), where \(T^\#\) is the team which maximizes \(h(\ldots)\) by adding a member.
         </li>
         <li>
             <b>Make a Team:</b>
@@ -332,6 +307,9 @@
                 </li>
                 <li>
                     using \(j_M(T, M)\) exactly \(o_M-|R(T)|\) times, fill the events with any other available members
+                </li>
+                <li>
+                    In the case where some events are empty (due to it being a new event and members neither have experience nor prefer to fill the event) we randomly assign a member who can fill it without breaking any constraints.
                 </li>
             </ul>
            

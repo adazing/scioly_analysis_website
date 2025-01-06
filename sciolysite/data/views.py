@@ -305,11 +305,12 @@ def skillView2(request):
     for p in practice_list:
         emis_list = EventMemberPracticeInstance.objects.filter(practice=p)
         results_dict = dict()
+        data_dict = dict()
         for emi in emis_list:
-            me_to_skill[(m, emi.event_name)].append(p)
             member = emi.member_name
+            me_to_skill[(member, p.event_name)].append(p)
             results_dict[(member, p.event_name)] = emi.points_scored/p.total_points
-            data_dict[(m, emi.event_name)] = emi
+            data_dict[(member, p.event_name)] = emi
         if results_dict:
             instance_to_emis[p] = results_dict
             instance_to_emi_data[p] = data_dict
@@ -371,7 +372,6 @@ def skillView2(request):
         new_params = minimize(custom_loss, [0.5 if x%2 == 0 else 0 for x in range(num_instances*2+1)], options={"disp":False}, callback=callback, bounds=[(0, 1) if x%2 == 0 else (-0.5, 0.5) for x in range(num_instances*2+1)]).x
     except StopIteration:
         new_params = callback.best_result
-    # print(new_params)
     # deal with instances with no matches
 
     valid_weights = [new_params[w*2] for w in range(num_instances) if instances_with_matches[w]==True]
@@ -417,9 +417,9 @@ def skillView2(request):
             scores[i]=final_score
             sum_scores += final_score
             if i in competition_list: # instance is a competition
-                members_to_data[member][event] += "<li>"+i.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(c.number_of_teams_competed)+" in "+emi.event_name+"</li>"
+                members_to_data[member][event] += "<li>"+i.name+" "+emi.team.name+": ranked "+str(emi.score)+"/"+str(i.number_of_teams_competed)+" in "+emi.event_name+"</li>"
             else: # instance is a practice test
-                members_to_data[member][event] += "<li>Practice "+p.event_name+": scored "+str(emi.points_scored)+"/"+str(c.total_points)+"</li>"
+                members_to_data[member][event] += "<li>Practice "+i.event_name+": scored "+str(emi.points_scored)+"/"+str(i.total_points)+"</li>"
         # compute predicted scores
         pred_final_score = sum_scores / num_scores
         pred_score = (pred_final_score - average_bias) / average_weight + skill_data.experience_rate*num_scores
@@ -432,7 +432,7 @@ def skillView2(request):
         for e in all_events:
             if e not in members_to_experience[m]:
                 members_to_experience[m][e] = 0
-                members_to_data[m][e] = "<p>No Data</p>"
+                # members_to_data[m][e] = "<p>No Data</p>"
                 members_to_skill_level[m][e] = skill_no_exp
 
     min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
@@ -441,8 +441,7 @@ def skillView2(request):
     
     table_columns = ["Name"]+all_events
     max_xp = max([max(members_to_experience[m].values(), default=0) for m in members_to_experience], default=0)
-    
-    table_info_data = [["".join([members_to_data[m][e]+"</ul>" for e in members_to_skill_level[m]])]+[members_to_data[m][e]+"</ul>" if e in members_to_skill_level[m] else "<p>No Data</p>" for e in all_events] for m in members_to_skill_level]
+    table_info_data = [["".join([members_to_data[m][e]+"</ul>" for e in members_to_data[m]])]+[members_to_data[m][e]+"</ul>" if members_to_experience[m][e]>0 else "<p>No Data</p>" for e in all_events] for m in members_to_skill_level]
     table_data = [[m]+[round((members_to_skill_level[m][e]-min_score)*100/(max_score-min_score), 2) if e in members_to_skill_level[m] else 0 for e in all_events] for m in members_to_skill_level]
     table_data = [table_data, table_info_data]
     table_data = "var tabledata = ["+"".join(["{"+"".join(['"'+str(table_columns[i])+'":'+str(table_data[0][t][i])+','+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' if i!=0 else '"'+str(table_columns[i])+'":"'+str(table_data[0][t][i])+'",'+'"'+str(table_columns[i])+'_INFO":"'+str(table_data[1][t][i])+'",' for i in range(len(table_columns))])+"}," for t in range(len(table_data[0]))])+"];"
@@ -459,6 +458,7 @@ def skillView2(request):
         "form": form,
     }
     return render(request, "data/skill_view.html", context)
+
 
 @login_required
 def nameChange(request):

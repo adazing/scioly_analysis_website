@@ -4,6 +4,7 @@
 
     {% block bodycontent %}
         <div class="formblock">
+            <p>This is a tool to check for event conflicts in existing teams.</p>
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ form|crispy}}
@@ -24,6 +25,7 @@
                             
                             <p><b>Step 1:</b> Make data. Requirements:</p>
                             <ul>
+                                <li>There is no header</li>
                                 <li>All events must be stated in the A column and should be strings. Only letters will be taken into account, so "&" will be changed to "and." Uppercase/lowercase does not matter. Make sure that the way you named the event is the same as in all the other competitions.</li>
                                 <li>All the members present in each event are stated in columns B through D, with the members on the event being in the same row as the event. There must be at least one member in each stated event. Only the member's names should be shown as strings, and only roman alphabet letters will be taken into account. Uppercase/lowercase does not matter. Make sure that the way you named the member is the same as in all the other competitions.</li>
                                 <li>The events do not need to be in any order, and there is no max number of events.</li>
@@ -43,7 +45,7 @@
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingTwo">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                        Creation of Conflicting Events CSV Data Using Google Sheets (OPTIONAL):
+                        Creation of Conflicting Events CSV Data Using Google Sheets:
 
                     </button>
                     </h2>

@@ -333,6 +333,10 @@ def frontend_generate(request, pk):
     
     if generated_competition_settings.user.id != request.user.id:
         raise Http404
+    
+    # teams that are in generated_competition_settings
+    teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
+        
     if not data.models.SkillData.objects.filter(user=request.user).exists():
         data.models.SkillData.objects.create(user=request.user)
     skill_data = data.models.SkillData.objects.get(user=request.user)
@@ -358,11 +362,12 @@ def frontend_generate(request, pk):
     for p in practice_list:
         emis_list = data.models.EventMemberPracticeInstance.objects.filter(practice=p)
         results_dict = dict()
+        data_dict = dict()
         for emi in emis_list:
-            me_to_skill[(m, emi.event_name)].append(p)
             member = emi.member_name
+            me_to_skill[(member, p.event_name)].append(p)
             results_dict[(member, p.event_name)] = emi.points_scored/p.total_points
-            data_dict[(m, emi.event_name)] = emi
+            data_dict[(member, p.event_name)] = emi
         if results_dict:
             instance_to_emis[p] = results_dict
             instance_to_emi_data[p] = data_dict
@@ -425,8 +430,6 @@ def frontend_generate(request, pk):
     except StopIteration:
         new_params = callback.best_result
 
-    # teams that are in generated_competition_settings
-    teams = GeneratedTeam.objects.filter(generated_competition_settings=generated_competition_settings)
     available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)]
     available_events = sorted([e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)])
     events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
@@ -553,6 +556,7 @@ def frontend_generate(request, pk):
         "conflicting_events" : conflicting_events,
         "event_types" : event_types,
         "min_score" : min_score,
+        "valid": teams.count()>0,
     }
     return render(request, "generation/generation_frontend.html", context)
 
