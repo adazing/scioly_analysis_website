@@ -430,6 +430,8 @@ def frontend_generate(request, pk):
     except StopIteration:
         new_params = callback.best_result
 
+    new_params = [float(p) for p in new_params]
+    
     available_members = [m.name for m in AvailableMember.objects.filter(generated_competition_settings = generated_competition_settings)]
     available_events = sorted([e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings)])
     events_with_3_members = [e.name for e in AvailableEvent.objects.filter(generated_competition_settings=generated_competition_settings, needs_3_members=True)]
