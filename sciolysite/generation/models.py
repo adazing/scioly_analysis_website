@@ -16,6 +16,8 @@ class GeneratedCompetitionSettings(models.Model):
     # min_event_experience = models.PositiveIntegerField()
     skill_vs_preferences = models.FloatField()
     max_num_of_build_events_per_member = models.PositiveIntegerField(default=2)
+    use_ranking = models.BooleanField(default=True)
+    partner_preference_weight = models.FloatField(default=0.05)
     #skill vs preference score preferences
     def __str__(self):
         return self.name+str(self.id)
@@ -95,7 +97,7 @@ class WantedMemberEventPair(models.Model):
 class WantedMemberMemberEventPair(models.Model):
     member1 = models.ForeignKey(AvailableMember, on_delete=models.CASCADE, related_name="member1")
     member2 = models.ForeignKey(AvailableMember, on_delete=models.CASCADE, related_name="member2")
-    event = models.ForeignKey(AvailableEvent, on_delete=models.CASCADE, null=True)
+    event = models.ForeignKey(AvailableEvent, on_delete=models.CASCADE, null=True)  # null kept for backwards compat, new entries always have an event
 
 class RequiredMemberToTeam(models.Model):
     member = models.ForeignKey(AvailableMember, on_delete = models.CASCADE)

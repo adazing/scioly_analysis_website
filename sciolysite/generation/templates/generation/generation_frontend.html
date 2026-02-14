@@ -114,6 +114,8 @@
     let members_to_ranked_preferences = {{members_to_ranked_preferences|safe}};
     let member_member_event_pairs = {{member_member_event_pairs|safe}};
     let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
+    let use_ranking = {{generated_competition_settings.use_ranking|yesno:"true,false"}};
+    let partner_preference_weight = {{generated_competition_settings.partner_preference_weight}};
     let available_members = {{available_members|safe}};
     let available_events = {{available_events|safe}};
     let events_with_3_members = {{events_with_3_members|safe}};
@@ -211,25 +213,29 @@
             {% comment %} console.log(e); {% endcomment %}
             for (var m of team[e]){
                 if (members_to_ranked_preferences[m].includes(e)){
-                    let idx = members_to_ranked_preferences[m].indexOf(e);
-                    total_preference_score += (worst_preference_amount-idx)/worst_preference_amount;
-
+                    if (use_ranking) {
+                        let idx = members_to_ranked_preferences[m].indexOf(e);
+                        total_preference_score += 2*(worst_preference_amount-idx)/(worst_preference_amount*(worst_preference_amount+1));
+                    } else {
+                        total_preference_score += 1/worst_preference_amount;
+                    }
                 }
             }
         }
 
 
         // partner preferences
+        var total_partner_score = 0;
         for (var e in team) {
             for (var mme of member_member_event_pairs) {
-                if (mme[2] === null || mme[2] === e) {
+                if (mme[2] === e) {
                     // if the two members are in the team[e]
                     if ((new Set([mme[0], mme[1]])).isSubsetOf(new Set(team[e]))) {
-                        total_preference_score += 1;
+                        total_partner_score += 1;
                     }
                 }
             }
-        
+
         //skills
             for (var m of team[e]) {
                 if ((m in members_to_skill_level) && (e in members_to_skill_level[m])){
@@ -249,7 +255,8 @@
                 // Log the current total_skill_score to trace the calculation
             }
         }
-        return total_skill_score * skill_vs_preferences + total_preference_score * (1-skill_vs_preferences) + total_required_score;
+        var normalized_partner_score = member_member_event_pairs.length > 0 ? total_partner_score / member_member_event_pairs.length : 0;
+        return total_skill_score + total_preference_score * skill_vs_preferences + normalized_partner_score * partner_preference_weight + total_required_score;
     }
 
 

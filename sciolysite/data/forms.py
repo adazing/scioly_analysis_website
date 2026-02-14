@@ -20,14 +20,17 @@ class SkillDataForm(ModelForm):
             "experience_rate",
             "start_date",
             "end_date",
+            "use_initial_skill",
         ]
         widgets = {
             "start_date": forms.DateInput(attrs={"type":"date"}),
             "end_date": forms.DateInput(attrs={"type":"date"}),
             "experience_rate": forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.1}),
+            "use_initial_skill": forms.CheckboxInput(),
         }
         labels = {
             "experience_rate":"value of experience",
+            "use_initial_skill":"use initial skill parameter (recommended if many first-timers in the team/using full history of the team)",
         }
     # def clean_experience_rate(self):
     #     experience_rate = self.cleaned_data.get('experience_rate')
@@ -45,7 +48,7 @@ class CompetitionForm(ModelForm):
         ]
         widgets = {
             "date": forms.DateInput(attrs={"type":"date"}),
-            "number_of_teams_competed" : forms.NumberInput(attrs={'min':0,'type': 'number'}),
+            "number_of_teams_competed" : forms.NumberInput(attrs={'min':2,'type': 'number'}),
         }
         labels = {
             "name" : "Name of competition",
@@ -54,8 +57,8 @@ class CompetitionForm(ModelForm):
         }
     def clean_number_of_teams_competed(self):
         number_of_teams_competed = self.cleaned_data.get("number_of_teams_competed")
-        if number_of_teams_competed<=0:
-            raise forms.ValidationError("The number of teams that competed is too low.")
+        if number_of_teams_competed<=1:
+            raise forms.ValidationError("The number of teams that competed must be at least 2.")
         return number_of_teams_competed
 
 class TeamForm(ModelForm):

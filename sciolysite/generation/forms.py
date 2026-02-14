@@ -49,7 +49,7 @@ class CompetitionSettingsForm(ModelForm):
     member_member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
     # File Structure:
     # Member1,Member2,Event3 <--- this are a list of people who want to be together on a certain event
-    # Member3,Member5,, <--- Null event means that any event counts
+    # (rows without a specific event are skipped)
     
     
     # officers=MultipleChoiceAnyField(required=False)
@@ -67,17 +67,21 @@ class CompetitionSettingsForm(ModelForm):
             "min_events_per_member",
             "skill_vs_preferences",
             "max_num_of_build_events_per_member",
+            "use_ranking",
+            "partner_preference_weight",
         ]
         labels= {
             "name":"Name of upcoming competition",
-            "skill_vs_preferences": "Value of Skill Over Preferences",
-
+            "skill_vs_preferences": "Event Preference Weight",
+            "use_ranking": "Use Ranked Event Preferences",
+            "partner_preference_weight": "Partner Preference Weight",
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
-            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5})
+            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5}),
+            'partner_preference_weight' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "step":0.05, "value":0.05}),
         }
-      
+
     # def clean_min_events_per_member(self):
     #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
     def clean_skill_vs_preferences(self):
@@ -85,6 +89,11 @@ class CompetitionSettingsForm(ModelForm):
         if skill_vs_preferences>1 or skill_vs_preferences<0:
             raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
         return skill_vs_preferences
+    def clean_partner_preference_weight(self):
+        partner_preference_weight = self.cleaned_data.get("partner_preference_weight")
+        if partner_preference_weight<0 or partner_preference_weight>1:
+            raise forms.ValidationError("Partner preference weight should be between 0 and 1")
+        return partner_preference_weight
     def clean_min_events_per_member(self):
         min_events_per_member = self.cleaned_data.get("min_events_per_member")
         if min_events_per_member<1:
@@ -314,16 +323,21 @@ class CompetitionSettingsEditForm(ModelForm):
             "min_events_per_member",
             "skill_vs_preferences",
             "max_num_of_build_events_per_member",
+            "use_ranking",
+            "partner_preference_weight",
         ]
         labels= {
             "name":"Name of upcoming competition",
-            "skill_vs_preferences": "Value of Skill Over Preferences",
+            "skill_vs_preferences": "Event Preference Weight",
+            "use_ranking": "Use Ranked Event Preferences",
+            "partner_preference_weight": "Partner Preference Weight",
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
-            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5})
+            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5}),
+            'partner_preference_weight' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "step":0.05, "value":0.05}),
         }
-      
+
     # def clean_min_events_per_member(self):
     #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
     def clean_skill_vs_preferences(self):
@@ -331,6 +345,11 @@ class CompetitionSettingsEditForm(ModelForm):
         if skill_vs_preferences>1 or skill_vs_preferences<0:
             raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
         return skill_vs_preferences
+    def clean_partner_preference_weight(self):
+        partner_preference_weight = self.cleaned_data.get("partner_preference_weight")
+        if partner_preference_weight<0 or partner_preference_weight>1:
+            raise forms.ValidationError("Partner preference weight should be between 0 and 1")
+        return partner_preference_weight
 
     def clean_min_events_per_member(self):
         min_events_per_member = self.cleaned_data.get("min_events_per_member")

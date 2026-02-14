@@ -277,9 +277,10 @@ def skillView2(request):
         start_date = form.cleaned_data.get("start_date")
         end_date = form.cleaned_data.get("end_date")
         experience_rate = form.cleaned_data.get("experience_rate")
+        use_initial_skill = form.cleaned_data.get("use_initial_skill")
         user = request.user
         SkillData.objects.filter(user=user).delete()
-        SkillData.objects.create(start_date = start_date, end_date = end_date, experience_rate = experience_rate, user = user)
+        SkillData.objects.create(start_date = start_date, end_date = end_date, experience_rate = experience_rate, use_initial_skill = use_initial_skill, user = user)
     skill_data = SkillData.objects.get(user=request.user)
     
     # looking through data
@@ -297,7 +298,7 @@ def skillView2(request):
             for m in members: # for each member on the event
                 if emi.score < c.number_of_teams_competed: # if the scores is less than the number of teams that competed
                     me_to_skill[(m, emi.event_name)].append(c)
-                    results_dict[(m, emi.event_name)] = 1-emi.score/c.number_of_teams_competed
+                    results_dict[(m, emi.event_name)] = 1-(emi.score-1)/(c.number_of_teams_competed-1)
                     data_dict[(m, emi.event_name)] = emi
         if results_dict:
             instance_to_emis[c] = results_dict
@@ -319,6 +320,7 @@ def skillView2(request):
     num_instances = len(instance_list) # number of valid competitions
     instance_to_idx = {instance_list[i]:i for i in range(num_instances)}
     instances_with_matches = [False for x in range(num_instances)]
+    use_initial_skill = skill_data.use_initial_skill
     def custom_loss(params):
         skill_no_exp = params[-1]
         instance_loss = [0 for i in range(num_instances)]
@@ -326,6 +328,13 @@ def skillView2(request):
         for member, event in me_to_skill: # for each member, event pair
             instances = me_to_skill[(member, event)] # instance where member, event pair competed
             num_scores = len(instances) # num instances where member, event pair competed
+            if not use_initial_skill and num_scores == 1:
+                # skip single-data-point pairs when initial skill is disabled
+                instance_idx = instance_to_idx[instances[0]]
+                if num_scores>0:
+                    instances_with_matches[instance_idx] = True
+                instance_frequency[instance_idx]+=1
+                continue
             scores = dict()
             sum_scores = 0
             for i in instances: # compute final scores
@@ -333,14 +342,14 @@ def skillView2(request):
                 if num_scores>0:
                     instances_with_matches[instance_idx] = True
                 instance_frequency[instance_idx]+=1
-                
+
                 score = instance_to_emis[i][(member, event)]
                 weight = params[instance_idx*2]
                 bias = params[instance_idx*2+1]
                 final_score = weight * score + bias
                 scores[i]=final_score
                 sum_scores += final_score
-            
+
             for i in instances: # compute loss
                 instance_idx = instance_to_idx[i]
                 score = instance_to_emis[i][(member, event)]
@@ -352,7 +361,7 @@ def skillView2(request):
                     pred_final_score = skill_no_exp
                 pred_score = (pred_final_score - bias) / weight
                 instance_loss[instance_idx]+=pow(pred_score-score, 2)
-        total_loss = sum([instance_loss[i]/instance_frequency[i] for i in range(num_instances)])
+        total_loss = sum([instance_loss[i]/instance_frequency[i] for i in range(num_instances) if instance_frequency[i]>0])
         return total_loss
 
     class TimeLimitCallback:
@@ -433,7 +442,7 @@ def skillView2(request):
             if e not in members_to_experience[m]:
                 members_to_experience[m][e] = 0
                 # members_to_data[m][e] = "<p>No Data</p>"
-                members_to_skill_level[m][e] = skill_no_exp
+                members_to_skill_level[m][e] = skill_no_exp if use_initial_skill else 0
 
     min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
     max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)

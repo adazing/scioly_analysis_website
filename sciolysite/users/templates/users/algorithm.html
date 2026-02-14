@@ -1,322 +1,1036 @@
 {% extends "main.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block headercontent %}
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js"></script>
 <meta name="google" content="notranslate">
+<style>
+    .paper-content {
+        max-width: 900px;
+        margin: 0 auto;
+        line-height: 1.7;
+    }
+    .paper-content p {
+        text-align: justify;
+        margin-bottom: 1em;
+    }
+    .paper-content h1 {
+        margin-top: 2em;
+        margin-bottom: 0.5em;
+        border-bottom: 2px solid #333;
+        padding-bottom: 0.3em;
+    }
+    .paper-content h2 {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+    .paper-content h4 {
+        margin-top: 1.2em;
+        margin-bottom: 0.4em;
+    }
+    .paper-content h5 {
+        margin-top: 1em;
+        margin-bottom: 0.3em;
+        font-size: 1.05em;
+    }
+    .figure-container {
+        text-align: center;
+        margin: 2em 0;
+        padding: 1em;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    .figure-container img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .figure-caption {
+        margin-top: 1em;
+        font-size: 0.95em;
+        color: #555;
+    }
+    .figure-caption strong {
+        color: #333;
+    }
+    .abstract-box {
+        background-color: #f5f5f5;
+        border-left: 4px solid #333;
+        padding: 1em 1.5em;
+        margin: 1.5em 0;
+        font-style: italic;
+    }
+    .notation-table {
+        margin: 1em 0;
+    }
+    .notation-table li {
+        margin-bottom: 0.3em;
+    }
+</style>
 {% endblock %}
 
 {% block bodycontent %}
-<div class="formblock">
-    <h1><b>Algorithm Description</b></h1>
+<div class="formblock paper-content">
+
+    <h1><b>Science Olympiad Team Generator</b></h1>
+    <p style="text-align: center; color: #666; margin-bottom: 2em;">An Algorithmic Approach to Automatic Skill Analysis and Team Assignment</p>
+
+    <div class="abstract-box">
+        <strong>Abstract:</strong> Creating fair and competitive Science Olympiad teams requires balancing individual skill assessments with member preferences while adhering to various constraints. This document presents an algorithmic approach that automates both the skill evaluation and team generation processes. We use leave-one-out cross-validation to learn difficulty adjustments for different competitions and practice tests, then employ a greedy optimization algorithm to construct teams that maximize a weighted combination of skill and preference scores. This approach minimizes potential biases, saves valuable time, and produces consistent, defensible team assignments.
+    </div>
+
+    <h1><b>1. Introduction</b></h1>
+
     <p>
-        We form an estimate of the skill of each member in each event. This estimate has several free parameters, which we set via leave-one-out cross-validation. The resulting skills are then used to assemble a team with a high predicted capability while satisfying preferences.
+        Science Olympiad is a U.S.-based team competition where groups of up to fifteen students compete in various events covering a wide range of scientific and engineering subjects. Competitions usually allow two or three students from the same team to collaborate on any one event, but the number and type of events can differ slightly between competitions. In every event offered at a competition, teams are ranked based on their performance. For example, a team that earns first place in an event has outperformed all other teams in that specific event. If a team does not participate in or cheats on an event, their rank for the event is usually a number higher than the total number of teams competing. Some competitions may also share what specific scores a team gets in an event, though there is often no way to compare results with other teams other than the ranking system.
     </p>
 
-    <h1><b>Estimating Skills for Members on Events</b></h1>
     <p>
-        There are four steps to estimating skills. In the first step, we compute a skill observation based on event data from past ranks or scores from competitions or practice tests. In the second step, we adjust skill observations to factor in the difference in difficulty between practice tests and/or competitions. In the third step, we use leave-one-out cross-validation to set the free parameters that are necessary to calculate adjusted skill observations. In the fourth step, we calculate the skill estimates to be displayed to the user.
-    </p>
-    <h4>Step 1: Skill Observations</h4>
-    <p>We process the ranks from past competition data and the scores of practice test data to create skill observations.</p>
-    <p>
-        For each member \(m\), event \(e\), and competition \(c\), let the skill observation be:
-        <br>
-        $$s_{m e c}=1-\frac{r_{m e c}}{t_{c}}$$
-        where \(r_{m e c}\) is the observed rank member \(m\) got in event \(e\) for competition \(c\) and \(t_c\) is the total number of teams in competition \(c\).
-        <br>
-        <br>
-        Similarly, for each member \(m\), event \(e\), and practice test \(p\), let the skill observation be: 
-        $$s_{m e p}=\frac{g_{m e p}}{t_{e p}}$$
-        where \(g_{m e p}\) is the grade in points that \(m\) got for event \(e\) for practice test \(p\) and \(t_{e p}\) is the maximum number of points a member could get for practice test \(p\) in event \(e\).
-        <br>
-        <br>
-        Let \(X_{m e}=\{x_1,x_2...x_n\}\) be the set of competitions \(c\) and practice tests \(p\) where member \(m\) participated in event \(e\) and let \(X=\{x_1,x_2...x_n\}\) be the set of all competitions \(c\) and practice tests \(p\).
-        Let \(s_{m e x}\) be the normalized skill for event \(e\) and member \(m\) in either a competition \(c\) or practice test \(p\).
-        <br>
+        After a competition ends, each team's overall score is determined by summing their rankings across all events. Teams are then ranked from lowest to highest overall score, with the lowest score indicating the best overall performance. Figure 1 illustrates how competition results are typically displayed, with columns representing events and rows representing teams. Each cell contains the rank that a particular team achieved in a specific event.
     </p>
 
+    <div class="figure-container">
+        <img src="{% static 'images/mit_results.png' %}" alt="MIT Invitational Results showing competition rankings">
+        <div class="figure-caption">
+            <strong>Figure 1: Competition Results Display.</strong> Part of the results for the 2025 MIT Invitational as shown on Duosmium. The columns represent different events, and the rows represent competing teams. Each cell shows the rank that a team achieved in that particular event. A team's overall placement is determined by the sum of all their event rankings, with lower totals being better.
+        </div>
+    </div>
 
-    <h4>Step 2: Skill Observation Adjustments</h4>
-    <p>To factor in the difference of difficulty between practice tests and/or competitions when estimating skill, we use free parameters to adjust skill observations.</p>
     <p>
-        Each competition \(c\) or practice test \(p\) has a weight \( 0 < w_x < 1 \) and a bias \( -1 < b_x <1 \).
-        <br>
-        The final adjusted observed skill is:
-        \(f_{m e x} = w_x \cdot s_{m e x} + b_x \)
+        To practice for competitions or to evaluate individual skills in particular events, teams might also hold practice tests or tryouts. These involve giving the same individual test to multiple students and comparing the number of points each individual student gains. Those who gain more points than others when taking the same test would be considered better than them in the test's event. Unlike competition data, practice test data provides individual-level performance information rather than team-level rankings.
     </p>
 
-
-    <h4>Step 3: Leave-One-Out Cross-Validation</h4>
     <p>
-        We use leave-one-out cross-validation to estimate the difficulty weights and biases of each competition and practice test.
-    </p>
-    <p>
-        <ol>
-            <li>If \(|X_{m e}\text{ } \backslash\{x_k\}| =0\), then \(\widehat{f_{m e x_k}}=a \), where \(0< a <1\) is the initial adjusted observed skill with no experience.</li>
-            <li>Otherwise, for each instance \(x_k\) left out, we calculate predictions of all observed skills \(\widehat{s_{m e x_k}}\) by averaging the adjusted observed skills of the other competitions and practice tests and converting the average to the estimated skill observation.
-                $$ \widehat{f_{m e x_k}} = \frac{1}{|X_{m e}\text{ } \backslash\{x_k\}|} \sum_{x \in X_{m e}\text{ } \backslash\{x_k\}} f_{m e x}$$
-                $$ \widehat{s_{m e x_k}} = \frac{\widehat{f_{m e x_k}} - b_{x_k}}{w_{x_k}}$$
-                {% comment %} $$ pred\_score(m, e, x_k) = pred\_adj\_score(m, e, x_k) + discovered\_experience\_rate \cdot experience(m, e, x_k)$$ {% endcomment %}
-            </li>
-            <li>
-                Let \(\mathcal{M}_{x} \) be the set of all member-event pairs \((m, e)\) for a competition or practice test instance \(x\). For any instance \(x_k\), the loss \(L\) is:
-                $$ L_{x_k} = \frac{1}{|\mathcal{M}_{x_k}|} \sum_{(m, e) \in \mathcal{M}_{x_k}} (s_{m e x_k} - \widehat{s_{m e x_k}})^2$$
-            </li>
-            <li>
-                The total loss \(L\) that we are trying to minimize is:
-                $$L = \frac{1}{|X|} \sum_{x_k \in X} L_{x_k}$$
-            </li>
-            <li>
-                We minimize the total loss with respect to \({\{w_x, b_x\}}_{x \in X} \) and \(a\) using SciPy's optimize.minimize function.
-            </li>
-        </ol>
-    </p>
-    <h4>Step 4: Calculating Outputs</h4>
-    <p>Using the weights and biases calculated from the previous step, we compute the skill estimates which are displayed.</p>
-    <p>
-        <ul>
-            <li>Competition or practice tests instances without overlapping member-event pairs \((m, e)\) are given the average weight (\(w_{avg}\)) and bias (\(b_{avg}\)) of the other instances that do have overlapping pairs. If there are no instances with overlapping pairs, \(w_{avg}\) is set to \(0.5\) and \(b_{avg}\) is set to \(0\).</li>
-            <li>We then predict the next competition or practice tests' adjusted skill observation from the other competition or practice test adjusted skill observations:
-                $$\widehat{f_{m e x_{n+1}}}= \frac{1}{|X_{m e}|} \sum_{x \in X} f_{m e x}$$
-                Or if there are no other data on an \((m, e)\) pair, then we let \(\widehat{f_{m e x_{n+1}}}=a\).
-                $$\widehat{s_{m e x_{n+1}}}=\frac{\widehat{f_{m e x_{n+1}}} - b_{avg}}{w_{avg}}$$
-            </li>
-            <li>We then attempt to add an experience factor that gives members with more experience better estimated skill and prevents members who were carried during one or two competitions to get relatively high skill scores. Let \( 0 < P < 1 \) be a parameter that a user can specify, which indicates the slope of the linear increase in skill relative to experience. Let \(E_{m e}\) represent the number of competitions or practice tests member \(m\) participated in event \(e\) in total in the past.
-                $$\widehat{(s_{m e x_{n+1}})'}=\widehat{s_{m e x_{n+1}}}+P\cdot E_{m e}$$
-            </li>
-            <li>Let \(S\) represent the set of all \(\widehat{(s_{m e x_{n+1}})'}\) for \(\forall (m, e) \in \mathcal{M}_{x} \forall x \in X \) We then calculate \(s_{U} = \max{S}\) and \(s_{u} = \min{S}\) and scale every skill from \(0\) and \(1\):
-            $$\widehat{(s_{m e x_{n+1}})''}=\frac{\widehat{(s_{m e x_{n+1}})'}-s_{u}}{s_{U}-s_{u}}$$
-            </li>
-        </ul>
-    </p>
-    <p>\(\widehat{(s_{m e x_{n+1}})''}\) represents the skill estimates for any next competition/practice test for a member \(m\) in an event \(e\).</p>
-
-    <h1><b>Generating Teams</b></h1>
-    <p>There are multiple steps to generating teams. In the first step, we define restrictions for adding a member to a particular event on a team. In the second step, we define the team score function which describes how good a team is in terms of both preferences and skill. In the third step, we generate teams that maximize the team score.</p>
-    {% comment %} <h4>Key</h4>
-    <p>
-        \(T\): current team assignment where \(T(e)\) is the set of members assigned to event \(e\)
-        <br>
-        \(A(T)\): set of unique members assigned to events on the team \(T\)
-        <br>
-        \(M\): set of all available members
-        <br>
-        \(E\): set of all available events
-        <br>
-        \(E_3\): set of events with a maximum of 3 members (instead of the usual 2)
-        <br>
-        \(worst\_preference\_amount \): maximum number of preferred events any member listed
-        <br>
-        \(P(m,e)\): rank of preference member \(m\) listed for event \(e\), if it is not listen then it is \(worst\_preference\_amount + 1\) (ex. if Mary has Astronomy as 1st preference, then \(P(Mary, Astronomy)=1\) )
-        <br>
-        \(Skill(m, e)\): skill score of member \(m\) in event \(e\) (covered in the previous section)
-        <br>
-        \(X\): set of pairwise member-event \((m, e)\) constraints, where member \(m\) must be placed on event \(e\)
-        <br>
-        \(R(T)\): set of unique members who are required to be on the team \(T\)
-        <br>
-        \(Y\): set of member-member-event triples \((m_1, m_2, e)\), which means members \(m_1\) and \(m_2\) want to be partners for event \(e\)
-        <br>
-        \(C(e)\): set of events conflicting with event \(e\)
-        <br>
-        \(B\): set of build events
-        <br>
-        \(s(m)\): boolean indicator if member \(m\) is a senior
-        <br>
-        \(max\_size\): maximum team size
-        <br>
-        \(max\_events\_per\_member\): maximum number of events per member
-        <br>
-        \(max\_build\_events\_per\_member\): maximum number of build events per member
-        <br>
-        \(min\_events\_per\_member\): minimum number of events per member
-        <br>
-        \(events\_done(T, m)\): number of event member \(m\) has on team assignment \(T\)
-        <br>
-        \(w\): parameter that can be changed by the user, if it is closer to 1, then it values skill more over preferences and vice-versa.
-
-
-    </p> {% endcomment %}
-
-
-    <h4>Step 1: Team Validity Constraints</h4>
-    <p>
-        <p>Define \( v(T, m, e) \) to check if adding member \( m \) to event \( e \) in team \( T \) is valid:</p>
-        <ul>
-            <li>
-                Event Capacity: Let \(T_e\) be the set of members on event \(e\) for team \(T\) and let \(E_3\) represent set of events with a maximum of 3 members (instead of the usual 2). Each event \( e \) can have at most \( k \) members, where \( k = 2 \) for standard events and \( k = 3 \) for events that explicitly allow three members.
-                \[
-                    |T_e| < \begin{cases}
-                    2 & \text{if } e \notin E_3, \\
-                    3 & \text{if } e \in E_3
-                    \end{cases}
-                \]
-            </li>
-            <li>
-                Unique Assignment: A member \( m \) cannot already be assigned to event \( e \).
-                \[
-                m \notin T_e
-                \]
-            </li>
-            <li>
-                Maximum Events per Member: Each member \( m \) can only participate in a limited number of events out of all the available events \(E\), defined as \( o_{\Gamma} \).
-                \[
-                |\{e \in E : m \in T_e\}| < o_{\Gamma}
-                \]
-            </li>
-            <li>
-                Maximum Build Events per Member: A member \( m \) can only participate in at most \( o_B \) events in the set of all build events \( B \).
-                \[
-                |\{e \in B : m \in T_e\}| < o_B
-                \]
-            </li>
-            <li>
-                Conflict-Free Scheduling: A member \( m \) cannot be assigned to events \( e_1 \) and \( e_2 \) that conflict in the competition schedule. Let \(C_e\) be the set of all events that conflict with event \(e\).
-                \[
-                \forall e' \in C_e, m \notin T_{e'}.
-                \]
-            </li>
-            <li>
-                Max Team Size: There cannot be more than \(o_M \) members on a team \(T\). Let \(A_T\) represent the set of unique members on a team \(T\).
-                \[
-                |A_T| \le o_M
-                \]
-            </li>
-            <li>
-                Senior Constraint: Let \(M\) represent the set of all the members \(m\) on team \(T\). Let \(q_m\) be a binary indicator bit for whether a member \(m\) is a senior (\(1\)) or not (\(0\)). There can be at most 7 seniors across all events in the team.
-                \[
-                |\{m \in M : q_m = 1, m \in T_e \}| \leq 7.
-                \]
-            </li>
-        </ul>
-        Validity Check: To check if assigning \( m \) to \( e \) on team \(T\) is valid, evaluate:
-        \[
-        v(T, m, e) = \text{True if all constraints above are satisfied, False otherwise.}
-        \]
+        When creating team assignments for any competition, officers and coaches must focus on two different criteria: <em>skills</em> and <em>preferences</em>. The amount of skill any one member has in an event must be evaluated based on both past competition data and practice test/tryout data. On the other hand, preference data includes both partner preferences and event preferences. Partner preferences refer to a student's preferred partners, whether for a specific event or not, while event preferences indicate the student's preferred events.
     </p>
 
-
-    <h4>Step 2: Team Scoring Function</h4>
     <p>
-        Define the function \(h(T)\) to score how good a team \(T\) is, as a combination of preference scores, skill scores, partner preferences, and required members on specific events.
-        <br>
-        <ul>
-            <li>
-                Preference Score:
-                <br>
-                Let \(d\) represent the maximum number of preferred events any member listed.
-                <br>
-                Let \(p_{me}\) represent the preference rank member \(m\) listed for event \(e\). If member \(m\) didn't list \(e\) at all when listing preferences then \(p_{m e}=d+1\).
-                $$h_P(T)=\sum_{e \in E} \sum_{m \in T_e} \frac{d - p_{m e} + 1}{d}$$
-            </li>
-            <li>
-                Skill Score:
-                $$h_S(T)=\sum_{e \in E} \sum_{m \in T_e} (\widehat{s_{m e x_{n+1}}})'' $$
-            </li>
-            <li>
-                Partner Preferences Bonus:
-                <br>
-                Let \(Y\) represent the set of user-specified member-member-event triples \((m_1, m_2, e)\), which means members \(m_1\) and \(m_2\) want to be partners for event \(e\). If event \(e\) for members \(m_1\) and \(m_2\) is not specified originally, then it is equivalent to making the triples \((m_1, m_2, e) \forall e \in E \).
-                $$h_M(T)=\sum_{e \in E} \sum_{(m_1, m_2, e) \in Y} I(m_1 \in T_e \land m_2 \in T_e)$$
-                (\(I\) is the indicator function, which returns \(0\) if the boolean expression is \(False\) and \(1\) if it is \(True\))
-            </li>
-            <li>
-                Required Pairs Bonus:
-                <br>
-                Let \(K\) represent the set of user-specified required member-event pairs \((m, e)\) that require member \(m\) to be on event \(e\).
-                $$h_K(T)=\sum_{(m,e) \in K} \begin{cases}
-                10000 & \text{if } m \in T(e), \\
-                0 & \text{otherwise}
-                \end{cases}
-                $$
-            </li>
-            <li>
-                Final Team Score:
-                <br>
-                Let \(0 < w < 1\) represent the parameter that can be changed by the user. If \(w\) is closer to \(1\), then the algorithm values skill more over preferences and if \(w\) is closer to \(0\), then it values preferences more over skill.
-                $$h(T) = w \cdot h_S(T) + (1-w) \cdot (h_P(T)+h_M(T)) + h_K(T)$$
-            </li>
-        </ul>
+        Usually, officers and coaches place a higher priority on fulfilling preference requests when creating team assignments for non-qualifier competitions (e.g., invitational competitions), allowing students to explore their interests and find events that they're really passionate about. On the other hand, for qualifying competitions (e.g., Regional, State, and National competitions), officers and coaches prefer team assignments that attempt to maximize performance at a competition. The relative importance of skills versus preferences can vary depending on the competition's significance and the team's goals.
     </p>
-    <h4>Step 3: Optimization Problem</h4>
+
+    <p>
+        To maximize performance, officers and coaches assign members to events that align best with their areas of expertise. However, determining the best assignments can be challenging because it is difficult to assess individual contributions within collaborative events. Some members may carry most of the workload in an event while their teammate(s) are carried, and results might inflate the carried teammate(s)' individual skill. Other external factors such as luck or the difficulty of the competition can make it challenging to evaluate individual skills and creates an opportunity for biases to influence decisions when creating teams.
+    </p>
+
+    <p>
+        Moreover, assessing skills is an extremely time-consuming process, especially when dealing with a large number of students and events. Officers and coaches must carefully assess each student's past performances to ensure that the best members are assigned to the right events. If partner or event preferences are also taken into consideration, complexity increases due to uncertainty on how to properly combine both factors. In addition, many competitions require the submission of team rosters very early before competitions, which often results in rushed decisions that may not fully consider all relevant factors.
+    </p>
+
+    <p>
+        <strong>Our Contribution:</strong> By automating the skill evaluation and team creation processes, fair teams can be created based on preference data and past performance data, minimizing potential for biases and saving valuable time. This document describes the algorithms used to (1) estimate member skills from heterogeneous data sources with varying difficulties, and (2) generate optimal team assignments that balance skill optimization with preference satisfaction.
+    </p>
+
+    <h1><b>2. Algorithm Overview</b></h1>
+
+    <p>
+        Our approach consists of two main phases. In the first phase, we estimate the skill of each member in each event using historical competition and practice test data. This estimate has several free parameters (difficulty weights and biases for each data source), which we set via leave-one-out cross-validation to ensure our model generalizes well to new competitions.
+    </p>
+
+    <p>
+        In the second phase, we use the computed skill estimates along with user-provided preference data to generate team assignments. We define a scoring function that combines skill scores, preference scores, partner bonuses, and required assignment bonuses. We then use a greedy optimization algorithm to construct teams that maximize this score while satisfying various constraints (event capacity, schedule conflicts, senior limits, etc.).
+    </p>
+
+    <h1><b>3. Estimating Skills for Members on Events</b></h1>
+
+    <p>
+        Before generating optimal teams, there must be a careful analysis of member skill levels in each event. Due to the limited available data, we opted for a simple approach that would ignore partnerships, instead opting for a system based on competition difficulty and experience that can be generalized for all members. The skill estimation process consists of four steps:
+    </p>
+
+    <ol>
+        <li><strong>Skill Observations:</strong> Convert raw competition ranks and practice test scores into normalized skill observations on a 0-1 scale.</li>
+        <li><strong>Skill Adjustments:</strong> Apply learned difficulty weights and biases to account for variations in competition/test difficulty.</li>
+        <li><strong>Cross-Validation:</strong> Use leave-one-out cross-validation to learn optimal difficulty parameters.</li>
+        <li><strong>Final Estimates:</strong> Compute final skill estimates with experience bonuses and normalization.</li>
+    </ol>
+
+    <h2>3.1 Notation</h2>
+    <p>
+        Throughout this section, we use the following notation:
+    </p>
+    <ul class="notation-table">
+        <li>\(m\) &mdash; a member (student)</li>
+        <li>\(e\) &mdash; an event</li>
+        <li>\(c\) &mdash; a competition instance</li>
+        <li>\(p\) &mdash; a practice test instance</li>
+        <li>\(x\) &mdash; a generic instance (either competition \(c\) or practice test \(p\))</li>
+        <li>\(C\) &mdash; the set of all competitions</li>
+        <li>\(P\) &mdash; the set of all practice tests</li>
+        <li>\(X = C \cup P\) &mdash; the set of all instances (competitions and practice tests)</li>
+        <li>\(X_{me}\) &mdash; the subset of instances where member \(m\) participated in event \(e\)</li>
+        <li>\(|X_{me}|\) &mdash; the number of instances in \(X_{me}\) (i.e., how much experience \(m\) has in event \(e\))</li>
+    </ul>
+
+    <h2>3.2 Step 1: Skill Observations</h2>
+
+    <p>
+        The first step is to convert raw performance data into normalized skill observations on a common 0-1 scale, where higher values indicate better performance. We process competition ranks and practice test scores differently due to their different nature.
+    </p>
+
+    <h4>Competition Data</h4>
+    <p>
+        For competitions, we only have access to <em>team-level rankings</em> in each event, not individual scores. If a member participated in an event at a competition, we attribute the team's rank in that event to the member. While this approach cannot distinguish between partners who contributed differently, it provides a reasonable approximation given the available data.
+    </p>
+    <p>
+        For each member \(m\), event \(e\), and competition \(c\), we define the skill observation as:
+        $$s_{mec} = 1 - \frac{r_{mec} - 1}{N_c - 1}$$
+        where:
+    </p>
+    <ul>
+        <li>\(r_{mec}\) is the rank that the team achieved in event \(e\) at competition \(c\) (with member \(m\) participating)</li>
+        <li>\(N_c\) is the total number of teams competing at competition \(c\)</li>
+    </ul>
+    <p>
+        This formula maps ranks to a 0-1 scale: a 1st place finish (rank = 1) yields a skill observation of 1, while a last place finish (rank = \(N_c\)) yields a skill observation of 0. For example, if a team placed 3rd out of 50 teams, the skill observation would be \(1 - (3-1)/(50-1) \approx 0.96\).
+    </p>
+
+    <h4>Practice Test Data</h4>
+    <p>
+        For practice tests and tryouts, we have access to <em>individual scores</em>, which provides more direct measurement of individual skill. For each member \(m\), event \(e\), and practice test \(p\), we define the skill observation as:
+        $$s_{mep} = \frac{g_{mep}}{G_{ep}}$$
+        where:
+    </p>
+    <ul>
+        <li>\(g_{mep}\) is the number of points scored by member \(m\) on event \(e\) in practice test \(p\)</li>
+        <li>\(G_{ep}\) is the maximum possible points for event \(e\) on practice test \(p\)</li>
+    </ul>
+    <p>
+        This formula directly converts scores to percentages on a 0-1 scale. A member who scored 85 out of 100 points would have a skill observation of 0.85.
+    </p>
+
+    <h4>Unified Notation</h4>
+    <p>
+        We use \(s_{mex}\) to denote the skill observation for member \(m\) in event \(e\) for any instance \(x\), whether \(x\) is a competition or a practice test. This allows us to treat both data sources uniformly in subsequent steps.
+    </p>
+
+    <h2>3.3 Step 2: Skill Observation Adjustments</h2>
+
+    <p>
+        A key challenge in combining data from multiple sources is that different competitions and practice tests have different difficulties. A skill observation of 0.7 from a very difficult invitational should be weighted more heavily than a 0.7 from an easy practice test. Similarly, some data sources might systematically produce higher or lower skill observations due to factors like scoring rubrics or competition format.
+    </p>
+
+    <p>
+        To account for these differences, we introduce learnable parameters for each instance. Each competition or practice test \(x\) has two parameters:
+    </p>
+    <ul>
+        <li><strong>Weight \(w_x\)</strong> where \(0 \le w_x \le 1\): Scales the skill observation. A higher weight means performances at this instance are more indicative of true skill (e.g., a harder competition where good performances are more meaningful).</li>
+        <li><strong>Bias \(b_x\)</strong> where \(-0.5 \le b_x \le 0.5\): Shifts the skill observation. A positive bias might account for a systematically easier competition where everyone scores higher.</li>
+    </ul>
+
+    <p>
+        The <em>adjusted skill observation</em> is computed as:
+        $$f_{mex} = w_x \cdot s_{mex} + b_x$$
+    </p>
+
+    <p>
+        <strong>Intuition:</strong> Consider two competitions. Competition A is a major invitational with many strong teams, while Competition B is a smaller local competition. We would expect Competition A to have a higher weight (good performances there are more impressive) and possibly a positive bias (even average teams score lower in absolute terms). The cross-validation procedure in the next step will learn appropriate values for these parameters.
+    </p>
+
+    <h2>3.4 Step 3: Leave-One-Out Cross-Validation</h2>
+
+    <p>
+        We need to learn the optimal values for the weights \(w_x\), biases \(b_x\), and an initial skill parameter \(a\) (used when a member has no prior experience in an event). We use <em>leave-one-out cross-validation</em> to find parameters that generalize well to predicting performance on held-out instances.
+    </p>
+
+    <h4>The Cross-Validation Procedure</h4>
+    <p>
+        The key idea is: for each data point we have, can we predict it using the other data points? If a member performed at a certain level in competitions 1, 2, and 3, can we predict their performance in competition 4? The parameters that lead to the best predictions are the ones we want.
+    </p>
+
     <ol>
         <li>
-            <b>Find Optimal Event Addition:</b>
-            <br>
-            Define a function \(j_E(T, m, z)\), which finds an optimal event addition \(e\) to put member \(m\) on for a team \(T\) and a boolean parameter \(z\) which represents whether the event addition is necessary or not.
-            <br>
-            Let \(T_m\) represent the set of events member \(m\) is assigned to for team \(T\).
-            <br>
-            Let \(o_{\gamma}\) represent the minimum number of events any member \(m \in M\) can be assigned to at once.
-            <ul>
-                <li>For a member \(m \in M\), iterate over all \(e \in E\)
-                    <ul>
-                        <li>if \(v(T, m, e)=True\), create \(T'\), which has member \(m\) added to \(T_e\). Then, define \(\Delta h = h(T') - h(T)\).</li>
-                        <li>if \(v(T, m, e)=False\), iterate over all members \(m_o \in T_e, m_o \ne m \):
-                            <ul>
-                                <li>If \(|T_m| > o_{\gamma} \): Define a \(T'\), which has \(m_o\) removed from \(T_e\). If \(f(T', m, e)=True\), then define a \(T''\), which has member \(m\) added to \(T'_e\).
-                                    <ul>
-                                        <li>If \(z=False\), then consider replacing \(m_o\) with \(m\) in \(T_e\) as valid only if \(\Delta h = h(T'')-h(T') \ge 0\)</li>
-                                        <li>Otherwise, always consider replacing \(m_o\) with \(m\) in \(T(e)\) as valid (even when \(\Delta h = h(T'')-h(T') < 0\))</li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-            The output of \(j_E(T, m, z)=T^*\), where \(T^*\) is the team which maximizes \(\Delta h\) by adding an event to a member. If there are no valid event additions for member \(m\), it just returns the original team \(T\).
+            <strong>For each member-event pair \((m, e)\) with instances \(X_{me}\):</strong>
+            <p>
+                We consider each instance \(x_k \in X_{me}\) one at a time and try to predict the skill observation \(s_{mex_k}\) using data from all other instances where this member participated in this event.
+            </p>
         </li>
         <li>
-            <b>Find Optimal Member Addition:</b>
-            <br>
-            Define a function \(j_M(T, M_j)\) for finding an optimal member addition \(m\) out of a set of possible members \(M_j\) to a team \(T\).
+            <strong>Computing predictions:</strong>
+            <p>
+                For a held-out instance \(x_k\), we predict the adjusted skill as follows:
+            </p>
             <ul>
                 <li>
-                    For a team \(T\), iterate over all members not already on the team (\(m \in M_j \backslash A_T\)).
-                    <ul>
-                        <li>Let \(T^@\) be a copy of \(T\)</li>
-                        <li>
-                            Repeat \(o_{\gamma} \) times:
-                            <ul>
-                                <li>\(T^@=j_E(T^@, m, True)\)</li>
-                            </ul>
-                            Repeat \(o_{\Gamma} - o_{\gamma}\) times:
-                            <ul>
-                                <li>If possible, \(T^@=j_E(T^@, m, False)\)</li>
-                            </ul>
-                        </li>
-                    </ul>
+                    If \(|X_{me}| = 1\) (this is the member's only data point for this event), we use the initial skill parameter: \(\widehat{f_{mex_k}} = a\). This represents a baseline expectation for how a first-timer performs, and a user can choose to disable this parameter if they prefer to exclude single-data-point pairs from the loss.
+                </li>
+                <li>
+                    Otherwise, we average the adjusted skills from all other instances:
+                    $$\widehat{f_{mex_k}} = \frac{1}{|X_{me}| - 1} \sum_{x \in X_{me} \setminus \{x_k\}} f_{mex}$$
                 </li>
             </ul>
-            The output of \(j_M(T, M_j)=T^\#\), where \(T^\#\) is the team which maximizes \(h(\ldots)\) by adding a member.
+            <p>
+                We then convert this predicted adjusted skill back to a predicted raw skill observation:
+                $$\widehat{s_{mex_k}} = \frac{\widehat{f_{mex_k}} - b_{x_k}}{w_{x_k}}$$
+            </p>
         </li>
         <li>
-            <b>Make a Team:</b>
-            <br>
-            Now, we generate a team using the two functions defined above.
-            <br>
-            Let \(\mathcal{R}\) represent the set of all members required to be on the team (including all the members in \(K\))
-            <ul>
-                <li>
-                    Start with empty \(T\)
-                </li>
-                <li>
-                    using \(j_M(T, \mathcal{R})\) exactly \(|\mathcal{R}|\) times, fill the events with required members (people that need to be on the team \(T\))
-                </li>
-                <li>
-                    using \(j_M(T, M)\) exactly \(o_M-|R(T)|\) times, fill the events with any other available members
-                </li>
-                <li>
-                    In the case where some events are empty (due to it being a new event and members neither have experience nor prefer to fill the event) we randomly assign a member who can fill it without breaking any constraints.
-                </li>
-            </ul>
-           
-            <br>
+            <strong>Computing loss per instance:</strong>
+            <p>
+                Let \(\mathcal{P}_{x_k}\) be the set of all member-event pairs \((m, e)\) that have data at instance \(x_k\). The loss for instance \(x_k\) is the mean squared error between actual and predicted skill observations:
+                $$L_{x_k} = \frac{1}{|\mathcal{P}_{x_k}|} \sum_{(m, e) \in \mathcal{P}_{x_k}} (s_{mex_k} - \widehat{s_{mex_k}})^2$$
+            </p>
+        </li>
+        <li>
+            <strong>Total loss:</strong>
+            <p>
+                The total loss we minimize is the sum of losses across all instances:
+                $$L = \sum_{x_k \in X} L_{x_k}$$
+            </p>
+        </li>
+        <li>
+            <strong>Optimization:</strong>
+            <p>
+                We minimize \(L\) with respect to all parameters \(\{w_x, b_x\}_{x \in X}\) and \(a\) using SciPy's <code>optimize.minimize</code> function with bound constraints. A 5-second time limit is enforced to prevent excessive computation time for large datasets.
+            </p>
         </li>
     </ol>
+
+    <p>
+        <strong>Why this works:</strong> If a competition is genuinely harder, members who do well there should also do well elsewhere, and vice versa. The cross-validation procedure finds parameters that make these predictions as accurate as possible. Competitions with inconsistent results (perhaps due to unusual conditions) will naturally receive lower weights.
+    </p>
+
+    <h4>Optional: Disabling the Initial Skill Parameter</h4>
+    <p>
+        Users can choose to disable the initial skill parameter \(a\) via the skill settings. When disabled, member-event pairs with only one data point are excluded from the cross-validation loss entirely, and the optimizer focuses only on pairs with two or more instances. Member-event pairs with no data receive a default skill of 0 instead of \(a\).
+    </p>
+    <p>
+        <strong>Tradeoffs:</strong>
+    </p>
+    <ul>
+        <li><strong>Keep \(a\) enabled (default, recommended when many first-timers):</strong> When many members try an event for the first time at different competitions, their results relative to \(a\) provide useful signal for calibrating competition difficulty. First-timers scoring lower at harder competitions and higher at easier ones helps the optimizer learn more accurate weights and biases. The tradeoff is that single-data-point pairs contribute to the loss alongside multi-data-point pairs, and the optimizer must balance fitting both. Since \(a\) is a single shared value that cannot distinguish between strong and weak first-timers, these predictions are inherently less informative&mdash;and optimizing them can pull the weights \(w_x\) and biases \(b_x\) away from values that would better fit the more meaningful multi-instance data.</li>
+        <li><strong>Disable \(a\) (recommended when most pairs have multiple data points):</strong> The optimizer focuses entirely on member-event pairs where cross-validation is most meaningful (2+ instances). This can produce more accurate weights and biases when there is sufficient multi-instance data, since the loss is not diluted by single-data-point predictions that are inherently uninformative. However, this discards the difficulty-calibration signal from first-timers.</li>
+    </ul>
+
+    <h2>3.5 Step 4: Calculating Final Skill Estimates</h2>
+
+    <p>
+        Using the optimized parameters from Step 3, we compute the skill estimates that will be displayed to users and used for team generation.
+    </p>
+
+    <ol>
+        <li>
+            <strong>Handling instances without overlapping data:</strong>
+            <p>
+                Some instances may not share any member-event pairs with other instances. For example, if a practice test was taken only by members who never competed in any of the logged competitions, there's no way to calibrate its difficulty relative to other instances. These instances receive the average weight (\(w_{avg}\)) and bias (\(b_{avg}\)) computed from instances that do have overlapping pairs. If no instances have overlapping pairs (e.g., completely new team with no historical data), we use defaults: \(w_{avg} = 0.5\) and \(b_{avg} = 0\).
+            </p>
+        </li>
+        <li>
+            <strong>Computing base skill estimate:</strong>
+            <p>
+                For each member-event pair \((m, e)\) with data, we average all adjusted skill observations:
+                $$\bar{f}_{me} = \frac{1}{|X_{me}|} \sum_{x \in X_{me}} f_{mex}$$
+                For member-event pairs with no data (member has never participated in this event), we use the initial skill: \(\bar{f}_{me} = a\).
+            </p>
+        </li>
+        <li>
+            <strong>Converting to predicted skill:</strong>
+            <p>
+                We convert the average adjusted skill to a predicted skill observation using the average parameters:
+                $$\tilde{s}_{me} = \frac{\bar{f}_{me} - b_{avg}}{w_{avg}}$$
+                This represents our best estimate of how the member would perform in a "typical" future competition.
+            </p>
+        </li>
+        <li>
+            <strong>Adding experience bonus:</strong>
+            <p>
+                Members with more experience in an event receive a bonus to their skill estimate. This serves two purposes: (1) it rewards consistency and dedicated practice, and (2) it prevents members who performed well in only one or two instances from being overrated compared to members with longer track records.
+            </p>
+            <p>
+                Let \(P\) be a user-specified experience rate parameter, and let \(n_{me} = |X_{me}|\) be the number of instances where member \(m\) participated in event \(e\):
+                $$\tilde{s}'_{me} = \tilde{s}_{me} + P \cdot n_{me}$$
+            </p>
+        </li>
+        <li>
+            <strong>Normalizing to [0, 1]:</strong>
+            <p>
+                Finally, we scale all skill estimates to the range [0, 1] for easier interpretation:
+                $$\hat{s}_{me} = \frac{\tilde{s}'_{me} - s_{min}}{s_{max} - s_{min}}$$
+                where \(s_{min}\) and \(s_{max}\) are the minimum and maximum values of \(\tilde{s}'_{me}\) across all member-event pairs with data.
+            </p>
+        </li>
+    </ol>
+
+    <p>
+        The final value \(\hat{s}_{me}\) is the skill estimate displayed to the user for member \(m\) in event \(e\). A value of 1.0 indicates the highest-skilled member in that event, while 0.0 indicates the lowest.
+    </p>
+
+    <h1><b>4. Generating Teams</b></h1>
+
+    <p>
+        With skill estimates computed, we now turn to the problem of generating optimal team assignments. This involves defining constraints that valid team assignments must satisfy, a scoring function that measures assignment quality, and an optimization algorithm to find high-scoring assignments.
+    </p>
+
+    <h2>4.1 Input Data</h2>
+
+    <p>
+        In addition to the computed skill estimates, team generation requires several types of user-provided input:
+    </p>
+
+    <h4>Event Preferences</h4>
+    <p>
+        Coaches and/or officers can optionally provide data on which events each member prefers, ranked from most wanted (rank 1) to least wanted. Figure 2 shows an example of preference data, where each row represents a member and columns show their ranked event preferences. If the "Use Ranked Event Preferences" option is enabled, the ordering matters&mdash;higher-ranked events contribute more to the scoring function. If disabled, all listed events are treated equally regardless of order (see Section 4.4.1).
+    </p>
+
+    <div class="figure-container">
+        <img src="{% static 'images/preference_data.png' %}" alt="Example preference data showing member event rankings">
+        <div class="figure-caption">
+            <strong>Figure 2: Example Event Preference Data.</strong> Each row represents a member, followed by their event preferences in order of priority. For instance, if a member lists "Astronomy, Chemistry, Physics", they most want to do Astronomy (rank 1), then Chemistry (rank 2), then Physics (rank 3). Members may list different numbers of preferences.
+        </div>
+    </div>
+
+    <h4>Partner Preferences</h4>
+    <p>
+        Coaches and/or officers can also optionally provide partner preference data, specifying pairs of members who wish to work together on a specific event.
+    </p>
+
+    <h4>Required Assignments</h4>
+    <p>
+        Sometimes certain members must be assigned to specific events (e.g., a member who has been building a device all season must compete with it). Required member-event pairs can be specified to ensure these constraints are satisfied.
+    </p>
+
+    <h4>Competition Settings</h4>
+    <p>
+        Additional settings include: the list of events, which events allow 3 members instead of 2, which events are "build events" (with separate limits), schedule conflicts between events, maximum/minimum events per member, maximum build events per member, team size limit, the event preference weight \(w_e\) (see Section 4.4.5), the partner preference weight \(w_p\) (see Section 4.4.5), and whether to use ranked event preferences (see Section 4.4.1).
+    </p>
+
+    <h2>4.2 Notation</h2>
+    <p>
+        We use the following notation for team generation:
+    </p>
+    <ul class="notation-table">
+        <li>\(T\) &mdash; a team assignment, where \(T_e\) is the set of members assigned to event \(e\)</li>
+        <li>\(A_T = \bigcup_{e \in E} T_e\) &mdash; the set of unique members on team \(T\)</li>
+        <li>\(M\) &mdash; set of all available members</li>
+        <li>\(E\) &mdash; set of all events</li>
+        <li>\(E_3 \subseteq E\) &mdash; set of events allowing 3 members (instead of the usual 2)</li>
+        <li>\(B \subseteq E\) &mdash; set of build events</li>
+        <li>\(C_e\) &mdash; set of events that conflict with event \(e\) (cannot be done by the same member due to schedule overlap)</li>
+        <li>\(o_M\) &mdash; maximum team size (number of unique members)</li>
+        <li>\(o_\Gamma\) &mdash; maximum events per member</li>
+        <li>\(o_\gamma\) &mdash; minimum events per member</li>
+        <li>\(o_B\) &mdash; maximum build events per member</li>
+        <li>\(w_e\) &mdash; event preference weight parameter (controls how much event preferences influence team score)</li>
+        <li>\(w_p\) &mdash; partner preference weight parameter (controls how much partner preferences influence team score)</li>
+        <li>\(d\) &mdash; the maximum number of preferences any member listed</li>
+        <li>\(p_{me}\) &mdash; preference rank of event \(e\) for member \(m\) (1 = top choice; if not listed, \(p_{me} = d + 1\))</li>
+        <li>\(\hat{s}_{me}\) &mdash; skill estimate for member \(m\) in event \(e\) (from Section 3)</li>
+        <li>\(q_m\) &mdash; binary indicator: 1 if member \(m\) is a senior, 0 otherwise</li>
+    </ul>
+
+    <h2>4.3 Step 1: Team Validity Constraints</h2>
+
+    <p>
+        Not all team assignments are valid. A valid assignment must satisfy several constraints related to event capacity, member limits, schedule conflicts, and Science Olympiad rules. We define a function \(v(T, m, e)\) that returns True if adding member \(m\) to event \(e\) on team \(T\) would result in a valid assignment.
+    </p>
+
+    <p>
+        All of the following constraints must be satisfied for \(v(T, m, e) = \text{True}\):
+    </p>
+
+    <ol>
+        <li>
+            <strong>Event Capacity:</strong>
+            <p>Each event has a maximum number of participants (usually 2, sometimes 3). The event must have room for another member:</p>
+            \[
+                |T_e| < \begin{cases}
+                3 & \text{if } e \in E_3 \text{ (events allowing 3 members)} \\
+                2 & \text{otherwise}
+                \end{cases}
+            \]
+        </li>
+        <li>
+            <strong>No Duplicate Assignment:</strong>
+            <p>A member cannot be assigned to the same event twice:</p>
+            \[m \notin T_e\]
+        </li>
+        <li>
+            <strong>Maximum Events per Member:</strong>
+            <p>Each member can only participate in up to \(o_\Gamma\) events total:</p>
+            \[|\{e' \in E : m \in T_{e'}\}| < o_{\Gamma}\]
+        </li>
+        <li>
+            <strong>Maximum Build Events per Member:</strong>
+            <p>Build events require significant preparation time. If \(e\) is a build event, the member must not have reached their build event limit:</p>
+            \[e \in B \Rightarrow |\{e' \in B : m \in T_{e'}\}| < o_B\]
+        </li>
+        <li>
+            <strong>No Schedule Conflicts:</strong>
+            <p>Some events occur at the same time during competition. A member cannot be assigned to events that conflict:</p>
+            \[\forall e' \in C_e: m \notin T_{e'}\]
+        </li>
+        <li>
+            <strong>Team Size Limit:</strong>
+            <p>The total number of unique members on the team cannot exceed \(o_M\) (typically 15):</p>
+            \[m \in A_T \text{ or } |A_T| < o_M\]
+            <p>(If the member is already on the team, this constraint is automatically satisfied.)</p>
+        </li>
+        <li>
+            <strong>Senior Limit:</strong>
+            <p>Science Olympiad rules limit the number of seniors (12th graders) to 7 per team:</p>
+            \[(q_m = 0) \text{ or } (m \in A_T) \text{ or } |\{m' \in A_T : q_{m'} = 1\}| < 7\]
+            <p>(Non-seniors can always be added. Seniors already on the team can be assigned to more events. New seniors can only be added if there are fewer than 7 seniors currently.)</p>
+        </li>
+    </ol>
+
+    <p>
+        <strong>Validity Check:</strong> The function \(v(T, m, e) = \text{True}\) if and only if all seven constraints above are satisfied.
+    </p>
+
+    <h2>4.4 Step 2: Team Scoring Function</h2>
+
+    <p>
+        We define a scoring function \(h(T)\) that measures how good a team assignment is. Higher scores are better. The score combines four components: event preference satisfaction, skill optimization, partner preference satisfaction, and required assignment fulfillment.
+    </p>
+
+    <h4>4.4.1 Event Preference Score \(h_P(T)\)</h4>
+    <p>
+        Members should be assigned to events they prefer. Higher-ranked preferences contribute more to the score, normalized so that each member's total possible preference contribution sums to 1:
+        $$h_P(T) = \sum_{e \in E} \sum_{m \in T_e} \begin{cases}
+        \frac{2(d - p_{me} + 1)}{d(d + 1)} & \text{if member } m \text{ listed event } e \text{ as a preference} \\
+        0 & \text{otherwise}
+        \end{cases}$$
+    </p>
+    <p>
+        <strong>Explanation:</strong> The denominator \(\frac{d(d+1)}{2}\) is the sum \(d + (d-1) + \cdots + 1\), ensuring that if a member is assigned to all \(d\) of their listed preferences, their total contribution is exactly 1. For example, if a member listed 5 preferences (so \(d = 5\)) and is assigned to their 1st choice, they contribute \(\frac{2 \cdot 5}{5 \cdot 6} = \frac{1}{3} \approx 0.33\). Their 2nd choice would contribute \(\frac{2 \cdot 4}{30} \approx 0.27\), and so on. Events not listed as preferences contribute 0.
+    </p>
+    <h4>Optional: Use Ranking</h4>
+    <p>
+        The "Use Ranked Event Preferences" option controls whether the order of a member's event preferences matters when computing the preference score.
+    </p>
+    <ul>
+        <li><strong>Enabled (default):</strong> Higher-ranked preferences contribute more to the score, as shown in the formula above, but normalized so that all preferences sum to 1. A member's 1st choice is worth more than their 2nd, which is worth more than their 3rd, etc. This is useful when members have a clear ordering of which events they care about most.</li>
+        <li><strong>Disabled:</strong> All listed preferences count equally as \(\frac{1}{d}\), regardless of the order they were listed. The algorithm only cares whether an event was listed as a preference, not where it was ranked. This is useful when members list events they'd be happy doing without a strong ordering preference.</li>
+    </ul>
+
+    <h4>4.4.2 Skill Score \(h_S(T)\)</h4>
+    <p>
+        The team should include skilled members in each event. The skill score is simply the sum of skill estimates for all assigned member-event pairs:
+        $$h_S(T) = \sum_{e \in E} \sum_{m \in T_e} \hat{s}_{me}$$
+    </p>
+    <p>
+        This encourages assigning members to events where they have demonstrated strong past performance.
+    </p>
+
+    <h4>4.4.3 Partner Preference Bonus \(h_M(T)\)</h4>
+    <p>
+        Some members want to work with specific partners on specific events. Let \(Y\) be the set of partner preference pairs \((m_1, m_2, e)\), indicating that members \(m_1\) and \(m_2\) want to be partners on event \(e\).
+    </p>
+    <p>
+        The partner preference bonus is the fraction of satisfied partner requests:
+        $$h_M(T) = \frac{1}{|Y|} \sum_{(m_1, m_2, e) \in Y} \mathbb{1}\big[\{m_1, m_2\} \subseteq T_e\big]$$
+    </p>
+    <p>
+        <strong>Key design choices:</strong>
+    </p>
+    <ul>
+        <li><strong>Event-specific only:</strong> Each partner request specifies a particular event, so each request is either satisfied (both members on that event) or not. This avoids the issue of general partner preferences incentivizing the algorithm to assign both members to as many shared events as possible.</li>
+        <li><strong>Normalization by \(|Y|\):</strong> Dividing by the total number of partner requests ensures \(h_M(T) \in [0, 1]\), keeping it on a comparable scale to other scoring components.</li>
+    </ul>
+
+    <h4>4.4.4 Required Assignment Bonus \(h_K(T)\)</h4>
+    <p>
+        Some member-event assignments are required and must be fulfilled. Let \(K\) be the set of required member-event pairs \((m, e)\):
+        $$h_K(T) = 10000 \cdot |\{(m,e) \in K : m \in T_e\}|$$
+    </p>
+    <p>
+        The large multiplier (10000) ensures that required assignments are effectively treated as hard constraints&mdash;any team that fails to satisfy them will score much lower than teams that do.
+    </p>
+
+    <h4>4.4.5 Final Team Score</h4>
+    <p>
+        The final score combines all components. The skill score serves as the baseline, with event preferences and partner preferences added on top via user-specified weights:
+        $$h(T) = h_S(T) + w_e \cdot h_P(T) + w_p \cdot h_M(T) + h_K(T)$$
+    </p>
+    <p>
+        The parameter \(w_e \ge 0\) controls how much event preferences influence the team score relative to skill:
+    </p>
+    <ul>
+        <li>\(w_e = 0\): Optimize purely for skill (ignore event preferences)</li>
+        <li>\(w_e = 0.5\): Event preferences have moderate influence alongside skill</li>
+        <li>\(w_e = 1\): Event preferences are weighted equally with skill</li>
+    </ul>
+    <p>
+        The parameter \(w_p \ge 0\) controls how much partner preferences influence the team score. A small value (e.g., \(w_p = 0.05\)) makes partner preferences act as a tiebreaker between otherwise similar assignments, while a larger value gives them more influence. Setting \(w_p = 0\) disables partner preferences entirely.
+    </p>
+    <p>
+        For important qualifying competitions, coaches might set \(w_e\) and \(w_p\) low to prioritize skill. For invitational competitions focused on development, higher values of \(w_e\) and \(w_p\) give more weight to member satisfaction.
+    </p>
+
+    <h2>4.5 Step 3: Greedy Team Construction</h2>
+
+    <p>
+        Finding the globally optimal team assignment is computationally intractable for realistic problem sizes. With \(n\) members, \(e\) events, and teams of size \(k\), the number of possible team assignments grows combinatorially&mdash;even a modest scenario with 30 members, 23 events, and teams of 15 would have billions of possible configurations. This makes exhaustive search infeasible.
+    </p>
+
+    <p>
+        Instead, we use a <em>greedy algorithm</em> that builds teams incrementally by making locally optimal decisions at each step. The greedy approach works as follows: rather than considering all possible complete teams at once, we build the team one member at a time, always choosing the member (and their event assignments) that most improves the team score at that moment. While this doesn't guarantee finding the globally optimal solution, it produces good solutions efficiently and has several practical advantages:
+    </p>
+
+    <ul>
+        <li><strong>Efficiency:</strong> The algorithm runs in polynomial time, making it practical for real-world use.</li>
+        <li><strong>Interpretability:</strong> Each decision can be explained (e.g., "Alice was added because she has strong skills in Chemistry and listed it as her top preference").</li>
+        <li><strong>Flexibility:</strong> The algorithm naturally handles constraints and can be easily modified.</li>
+    </ul>
+
+    <p>
+        The algorithm consists of three main procedures, which we describe in detail below with pseudocode. Understanding how these procedures interact is key to understanding the overall team generation process.
+    </p>
+
+    <h4>4.5.1 Find Optimal Event Addition: \(j_E(T, m, \text{necessary})\)</h4>
+
+    <p>
+        This is the most fundamental building block of our algorithm. Given a team \(T\) and a member \(m\) who needs to be assigned to more events, this function finds the single best event to assign \(m\) to. It answers the question: "Given the current state of the team, what's the best event we can add this member to?"
+    </p>
+
+    <p>
+        The <code>necessary</code> parameter is crucial and controls the algorithm's behavior:
+    </p>
+    <ul>
+        <li><strong>When <code>necessary = True</code>:</strong> We <em>must</em> find an assignment for this member, even if it temporarily decreases the team score. This is used when we're trying to meet the minimum events requirement for a member&mdash;we can't just skip them because no assignment improves the score.</li>
+        <li><strong>When <code>necessary = False</code>:</strong> We only accept assignments that improve (or at least don't decrease) the team score. This is used when assigning optional additional events beyond the minimum.</li>
+    </ul>
+
+    <h5>Inputs</h5>
+    <ul>
+        <li>\(T\): Current team assignment (a mapping from events to sets of members)</li>
+        <li>\(m\): The member we want to assign to an event</li>
+        <li>\(\text{necessary}\): Boolean flag&mdash;if True, we must find an assignment even if score decreases</li>
+    </ul>
+
+    <h5>Output</h5>
+    <p>An updated team \(T^*\) with \(m\) assigned to one additional event, or <code>null</code> if no valid assignment exists.</p>
+
+    <h5>Pseudocode</h5>
+
+    <pre style="background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">
+<b>function</b> FindOptimalEventAddition(T, m, necessary):
+    best_team ← null
+    best_score_delta ← -∞
+    original_score ← h(T)
+
+    <b>for each</b> event e ∈ E <b>do</b>
+        <b>if</b> m ∉ T_e <b>then</b>  <i>// member not already on this event</i>
+
+            <i>// Case 1: Direct addition is valid</i>
+            <b>if</b> v(T, m, e) = True <b>then</b>
+                T' ← copy(T)
+                T'_e ← T'_e ∪ {m}
+                Δh ← h(T') - original_score
+
+                <b>if</b> Δh > best_score_delta <b>then</b>
+                    best_team ← T'
+                    best_score_delta ← Δh
+
+            <i>// Case 2: Try replacing existing members</i>
+            <b>else</b>
+                <b>for each</b> member m' ∈ T_e, m' ≠ m <b>do</b>
+                    events_by_m' ← |{e' ∈ E : m' ∈ T_e'}|
+
+                    <i>// Can only replace if m' has extra events and isn't required</i>
+                    <b>if</b> events_by_m' > o_γ <b>and</b> (m', e) ∉ K <b>then</b>
+                        T' ← copy(T)
+                        T'_e ← T'_e \ {m'}  <i>// remove m'</i>
+
+                        <b>if</b> v(T', m, e) = True <b>then</b>
+                            T'_e ← T'_e ∪ {m}  <i>// add m</i>
+                            Δh ← h(T') - original_score
+
+                            <i>// Accept if necessary OR if score improves</i>
+                            <b>if</b> (necessary <b>or</b> Δh ≥ 0) <b>and</b> Δh > best_score_delta <b>then</b>
+                                best_team ← T'
+                                best_score_delta ← Δh
+
+    <b>return</b> best_team
+    </pre>
+
+    <h5>Detailed Explanation</h5>
+
+    <p>The function iterates through every event in \(E\) and considers two cases for each:</p>
+
+    <p><strong>Case 1: Direct Addition</strong></p>
+    <p>
+        First, we check if we can simply add \(m\) to event \(e\) without removing anyone. This is possible when all validity constraints are satisfied (the event has capacity, \(m\) hasn't reached their event limit, there are no schedule conflicts, etc.). If valid, we:
+    </p>
+    <ol>
+        <li>Create a copy of the current team \(T'\)</li>
+        <li>Add member \(m\) to event \(e\) in the copy</li>
+        <li>Calculate how much this changes the team score: \(\Delta h = h(T') - h(T)\)</li>
+        <li>If this is the best improvement we've seen so far, remember this configuration</li>
+    </ol>
+
+    <p><strong>Case 2: Replacement</strong></p>
+    <p>
+        If direct addition is not valid (typically because the event already has the maximum number of members), we consider <em>replacing</em> an existing member on that event. For each member \(m'\) currently assigned to event \(e\), we check if replacement is allowed:
+    </p>
+    <ul>
+        <li><strong>Minimum events check:</strong> Member \(m'\) must have more than \(o_\gamma\) events currently assigned. If they're at exactly the minimum, removing them from this event would violate constraints, so we can't replace them.</li>
+        <li><strong>Required assignment check:</strong> The pair \((m', e)\) must not be in the required assignments set \(K\). If a coach specifically required \(m'\) to be on event \(e\), we can't remove them.</li>
+        <li><strong>Score improvement check:</strong> If <code>necessary = False</code>, the replacement must improve the score (\(\Delta h \ge 0\)). If <code>necessary = True</code>, we accept the replacement even if the score decreases (because we must place \(m\) somewhere).</li>
+    </ul>
+
+    <h5>Why Replacement Matters</h5>
+    <p>
+        Consider this scenario: Alice is highly skilled in Chemistry, but the Chemistry event is already full with Bob and Carol. Without the replacement mechanism, Alice couldn't be assigned to Chemistry at all. But suppose Bob is mediocre at Chemistry and has 5 other events (well above the minimum). The replacement logic allows us to remove Bob from Chemistry and add Alice, improving the team's overall Chemistry performance. Bob still has his other events, so no constraints are violated.
+    </p>
+
+    <h5>Return Value</h5>
+    <p>
+        The function returns the team configuration that achieves the best score improvement (or least score decrease, if <code>necessary = True</code>). If no valid assignment exists at all&mdash;perhaps due to schedule conflicts or the member already being on all possible events&mdash;it returns <code>null</code>.
+    </p>
+
+    <h4>4.5.2 Find Optimal Member Addition: \(j_M(T, M_{\text{pool}})\)</h4>
+
+    <p>
+        While the previous function finds the best <em>event</em> for a given member, this function finds the best <em>member</em> to add to the team from a pool of candidates. It simulates adding each candidate with their optimal event assignments and returns the candidate that results in the highest team score.
+    </p>
+
+    <p>
+        This function is the key decision-maker in team construction: at each step, it determines which member should be added next. The answer depends not just on individual skill, but on how well each candidate complements the existing team.
+    </p>
+
+    <h5>Inputs</h5>
+    <ul>
+        <li>\(T\): Current team assignment</li>
+        <li>\(M_{\text{pool}}\): Set of candidate members to consider (might be required members, or all available members)</li>
+    </ul>
+
+    <h5>Output</h5>
+    <p>A tuple containing (1) the updated team \(T^\#\) with the best member added and assigned to events, and (2) the member \(m^*\) who was added. Returns <code>null</code> if no candidate can be validly added.</p>
+
+    <h5>Pseudocode</h5>
+
+    <pre style="background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">
+<b>function</b> FindOptimalMemberAddition(T, M_pool):
+    best_team ← null
+    best_member ← null
+    best_score ← -∞
+    A_T ← {m : m ∈ T_e for some e ∈ E}  <i>// members already on team</i>
+
+    <b>for each</b> member m ∈ M_pool \ A_T <b>do</b>  <i>// candidates not on team</i>
+        T_working ← copy(T)
+        success ← True
+
+        <i>// Phase 1: Assign minimum required events (must succeed)</i>
+        <b>for</b> i ← 1 <b>to</b> o_γ <b>do</b>
+            T_result ← FindOptimalEventAddition(T_working, m, necessary=True)
+            <b>if</b> T_result = null <b>then</b>
+                success ← False
+                <b>break</b>
+            T_working ← T_result
+
+        <i>// Phase 2: Assign additional events if beneficial (optional)</i>
+        <b>if</b> success <b>then</b>
+            <b>for</b> i ← 1 <b>to</b> (o_Γ - o_γ) <b>do</b>
+                T_result ← FindOptimalEventAddition(T_working, m, necessary=False)
+                <b>if</b> T_result ≠ null <b>then</b>
+                    T_working ← T_result
+                <b>else</b>
+                    <b>break</b>  <i>// no more beneficial additions</i>
+
+            <i>// Evaluate this candidate</i>
+            score ← h(T_working)
+            <b>if</b> score > best_score <b>then</b>
+                best_team ← T_working
+                best_member ← m
+                best_score ← score
+
+    <b>return</b> (best_team, best_member)
+    </pre>
+
+    <h5>Detailed Explanation</h5>
+
+    <p>For each candidate member \(m\) who isn't already on the team, the algorithm simulates what the team would look like if we added them:</p>
+
+    <p><strong>Phase 1: Minimum Events (Mandatory)</strong></p>
+    <p>
+        Every member on a Science Olympiad team must participate in at least \(o_\gamma\) events (often 1-2). In this phase, we call <code>FindOptimalEventAddition</code> exactly \(o_\gamma\) times with <code>necessary=True</code>. This ensures we find assignments even if they don't immediately improve the score.
+    </p>
+    <p>
+        If we cannot find \(o_\gamma\) valid event assignments for this candidate (perhaps due to schedule conflicts or other constraints), we mark them as unsuccessful and move on to the next candidate. This prevents us from adding members who would violate the minimum events requirement.
+    </p>
+
+    <p><strong>Phase 2: Additional Events (Optional)</strong></p>
+    <p>
+        After satisfying the minimum, we try to assign additional events up to the maximum \(o_\Gamma\). However, these assignments are only made if they improve (or maintain) the team score (<code>necessary=False</code>). This reflects the reality that:
+    </p>
+    <ul>
+        <li>Some members are versatile and can effectively contribute to many events</li>
+        <li>Other members are specialists who should focus on their strengths</li>
+        <li>Assigning a member to an event they're weak in might hurt the team more than help</li>
+    </ul>
+    <p>
+        We stop adding events as soon as no beneficial assignment can be found. For example, if a member is excellent at Chemistry and Biology but weak at everything else, they might end up with just 2 events even if the maximum is 5.
+    </p>
+
+    <h5>Evaluation</h5>
+    <p>
+        After simulating the addition of candidate \(m\), we compute the total team score \(h(T_{\text{working}})\). We track the candidate who achieves the highest score. Note that we're comparing final team scores, not just the score improvement from adding this member&mdash;this ensures we make globally good decisions.
+    </p>
+
+    <h5>Why This Two-Phase Approach?</h5>
+    <p>
+        Consider Alice and Bob, both candidates for the team. Alice is moderately good at many events, while Bob is exceptional at one event but weak at others. With a minimum of 2 events:
+    </p>
+    <ul>
+        <li>Alice might get assigned to Events A, B, C, D (all beneficial)</li>
+        <li>Bob might get assigned to Event X (excellent) and Event Y (forced, because he needs 2 events minimum)</li>
+    </ul>
+    <p>
+        The two-phase approach ensures Bob gets his strong event assignment, but doesn't force him into multiple weak events. The final comparison picks whichever candidate (with their full assignment) results in a better team.
+    </p>
+
+    <h4>4.5.3 Build Team: \(\text{make_team}()\)</h4>
+
+    <p>
+        This is the main orchestrating function that constructs a complete team by repeatedly calling the helper functions above. It handles the overall flow: first adding required members, then filling remaining spots with the best available candidates, and finally ensuring all events have participants.
+    </p>
+
+    <h5>Inputs</h5>
+    <ul>
+        <li>\(M\): Set of all available members</li>
+        <li>\(\mathcal{R}\): Set of required members who must be on this team (e.g., team captains, members with required assignments)</li>
+        <li>\(K\): Set of required member-event pairs (e.g., "Alice must do Chemistry")</li>
+        <li>\(o_M\): Maximum team size (typically 15 for Science Olympiad)</li>
+    </ul>
+
+    <h5>Output</h5>
+    <p>A complete team assignment \(T\) mapping every event to its assigned members.</p>
+
+    <h5>Pseudocode</h5>
+
+    <pre style="background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">
+<b>function</b> MakeTeam(M, R, K, o_M):
+    <i>// Initialize empty team</i>
+    T ← {e ↦ ∅ : e ∈ E}  <i>// all events have empty member sets</i>
+    team_members ← ∅
+
+    <i>// Phase 1: Add all required members first</i>
+    <b>while</b> |team_members| < |R| <b>do</b>
+        (T_new, m_new) ← FindOptimalMemberAddition(T, R)
+        <b>if</b> T_new = null <b>then</b>
+            <b>break</b>  <i>// cannot add more required members</i>
+        T ← T_new
+        team_members ← team_members ∪ {m_new}
+
+    <i>// Phase 2: Fill remaining spots with best available members</i>
+    <b>while</b> |team_members| < o_M <b>do</b>
+        <i>// Exclude members required on other teams</i>
+        candidates ← M \ (members required on other teams)
+        (T_new, m_new) ← FindOptimalMemberAddition(T, candidates)
+        <b>if</b> T_new = null <b>then</b>
+            <b>break</b>  <i>// cannot add more members</i>
+        T ← T_new
+        team_members ← team_members ∪ {m_new}
+
+    <i>// Phase 3: Fix any empty events</i>
+    T ← FixEmptyEvents(T, team_members)
+
+    <b>return</b> T
+    </pre>
+
+    <h5>Detailed Explanation</h5>
+
+    <p><strong>Initialization:</strong></p>
+    <p>
+        We start with a completely empty team&mdash;every event has no members assigned. We also maintain a set <code>team_members</code> to track who has been added so far.
+    </p>
+
+    <p><strong>Phase 1: Required Members</strong></p>
+    <p>
+        Some members must be on the team regardless of their skill scores. This includes:
+    </p>
+    <ul>
+        <li>Members with required assignments in \(K\) (e.g., someone who built a device all season must compete with it)</li>
+        <li>Members explicitly marked as required by the coach (e.g., team captains)</li>
+    </ul>
+    <p>
+        We add required members first because they <em>must</em> be on the team&mdash;it would be incorrect to fill all spots with "optimal" members and then have no room for required ones. By processing them first, we ensure they're included and can then optimize the remaining spots around them.
+    </p>
+    <p>
+        Even among required members, we use <code>FindOptimalMemberAddition</code> to determine the best <em>order</em> to add them and their optimal event assignments. This matters because the order affects which events are available for later members.
+    </p>
+
+    <p><strong>Phase 2: Filling Remaining Spots</strong></p>
+    <p>
+        After required members are placed, we fill the remaining spots (up to the team size limit \(o_M\)) with the best available candidates. At each step, <code>FindOptimalMemberAddition</code> considers all candidates and selects the one who would most improve the team.
+    </p>
+    <p>
+        This is where the greedy algorithm makes its key decisions. The first few members added often have many good event options, while later members must work around existing assignments. The algorithm naturally handles this by always choosing the currently best option.
+    </p>
+    <p>
+        Note that we exclude members who are required on <em>other</em> teams from consideration. This is important when generating multiple teams (see below)&mdash;we don't want to accidentally place someone on Team 1 when they're supposed to be on Team 2.
+    </p>
+
+    <p><strong>Phase 3: Fixing Empty Events</strong></p>
+    <p>
+        After adding all members, some events might still be empty. This typically happens with:
+    </p>
+    <ul>
+        <li>New events that no member has experience in or preferences for</li>
+        <li>Unpopular events that no one listed as a preference</li>
+        <li>Events with many schedule conflicts</li>
+    </ul>
+    <p>
+        The <code>FixEmptyEvents</code> function (described below) addresses this by assigning existing team members to unfilled events.
+    </p>
+
+    <h4>4.5.4 Fix Empty Events</h4>
+
+    <p>
+        After the main team construction phases, some events may still lack participants. In Science Olympiad, every event typically needs to be filled&mdash;leaving an event empty means the team earns no points there, which significantly hurts overall placement. This helper function ensures all events have at least some coverage.
+    </p>
+
+    <h5>Why Events Might Be Empty</h5>
+    <ul>
+        <li><strong>New events:</strong> Science Olympiad rotates events periodically. A brand-new event has no historical performance data, so members have skill estimates of \(a\) (the default), and may not have listed it as a preference.</li>
+        <li><strong>Unpopular events:</strong> Some events are consistently unpopular (perhaps perceived as boring or difficult). If no one lists them as preferences, the algorithm might not assign anyone during normal team construction.</li>
+        <li><strong>Schedule conflicts:</strong> Events that conflict with many popular events might get left empty because members who might have done them are already committed elsewhere.</li>
+    </ul>
+
+    <h5>Pseudocode</h5>
+
+    <pre style="background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">
+<b>function</b> FixEmptyEvents(T, team_members):
+    <i>// Count empty spots across all events</i>
+    empty_spots ← Σ_{e ∈ E} (capacity(e) - |T_e|)
+
+    <b>while</b> empty_spots > 0 <b>do</b>
+        best_team ← null
+        best_score ← -∞
+
+        <i>// Try all valid (event, member) assignments</i>
+        <b>for each</b> event e ∈ E <b>do</b>
+            <b>for each</b> member m ∈ team_members <b>do</b>
+                <b>if</b> v(T, m, e) = True <b>then</b>
+                    T' ← copy(T)
+                    T'_e ← T'_e ∪ {m}
+                    score ← h(T')
+
+                    <b>if</b> score > best_score <b>then</b>
+                        best_team ← T'
+                        best_score ← score
+
+        <b>if</b> best_team ≠ null <b>then</b>
+            T ← best_team
+            empty_spots ← empty_spots - 1
+        <b>else</b>
+            <b>break</b>  <i>// no more valid assignments possible</i>
+
+    <b>return</b> T
+    </pre>
+
+    <h5>Detailed Explanation</h5>
+
+    <p>
+        This function takes a simpler approach than the main construction algorithms. Rather than considering complex replacements, it just looks at all valid (event, member) pairs and greedily selects the one that maximizes the team score.
+    </p>
+
+    <p>
+        For each empty spot, the algorithm:
+    </p>
+    <ol>
+        <li>Iterates through all events \(e\) that have room for more members</li>
+        <li>For each event, considers every team member \(m\) who isn't already on that event</li>
+        <li>Checks if adding \(m\) to \(e\) is valid (considering schedule conflicts, event limits, etc.)</li>
+        <li>If valid, computes the team score that would result</li>
+        <li>Selects the assignment that achieves the highest score</li>
+    </ol>
+
+    <p>
+        This process repeats until all events are filled or no more valid assignments exist. In practice, some events might remain unfilled if no team member can be validly assigned (e.g., if all members have schedule conflicts with that event).
+    </p>
+
+    <h5>Note on Optimality</h5>
+    <p>
+        This greedy approach doesn't guarantee optimal filling of empty events. A more sophisticated algorithm might recognize that moving Alice from Event A to Event B, and then assigning Bob to Event A, produces a better overall result. However, the simple greedy approach works well in practice because most "leftover" events are genuinely less important to the team's success.
+    </p>
+
+    <h4>4.5.5 Generating Multiple Teams</h4>
+
+    <p>
+        Many schools need to generate multiple teams for a competition. For example, a large school might have both a Varsity team (competing for placement) and a Junior Varsity team (for development and experience). The algorithm handles this by generating teams sequentially, with earlier teams getting priority.
+    </p>
+
+    <h5>Pseudocode</h5>
+
+    <pre style="background-color: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.9em;">
+<b>function</b> GenerateAllTeams(teams_config, M, all_required_members):
+    generated_teams ← []
+    available_members ← M
+
+    <b>for</b> t ← 1 <b>to</b> |teams_config| <b>do</b>
+        R_t ← required members for team t
+        K_t ← required member-event pairs for team t
+        o_M_t ← team size for team t
+
+        <i>// Generate this team</i>
+        (T_t, members_t) ← MakeTeam(available_members, R_t, K_t, o_M_t)
+        generated_teams.append(T_t)
+
+        <i>// Remove assigned members from pool</i>
+        available_members ← available_members \ members_t
+
+    <b>return</b> generated_teams
+    </pre>
+
+    <h5>Detailed Explanation</h5>
+
+    <p>
+        The key insight is that teams are generated <em>sequentially</em>, not simultaneously. This has important implications:
+    </p>
+
+    <p><strong>Sequential Generation:</strong></p>
+    <p>
+        Teams are generated in the order they appear in the configuration. The first team gets first pick of all available members. Once Team 1 is complete, its members are removed from the pool, and Team 2 is generated from the remaining members. This continues for all teams.
+    </p>
+
+    <p><strong>Priority Implications:</strong></p>
+    <p>
+        The ordering of teams matters significantly. If Varsity is generated first, it will get the strongest members based on skill and preference scores. JV will then be optimized from whoever remains. Coaches should order teams by priority&mdash;typically Varsity first, then JV, then additional teams.
+    </p>
+
+    <p><strong>Required Members Across Teams:</strong></p>
+    <p>
+        Each team has its own set of required members \(R_t\). A member who is required on Team 2 will be automatically excluded from Team 1's candidate pool, ensuring they're available when Team 2 is generated. This allows coaches to control team composition across multiple teams.
+    </p>
+
+    <p><strong>Fairness Considerations:</strong></p>
+    <p>
+        While this sequential approach is simple and efficient, it's worth noting that it optimizes each team independently rather than jointly optimizing all teams together. In some cases, a different distribution of members might make both teams stronger overall. However, joint optimization would be computationally much more expensive, and the sequential approach aligns with how coaches typically think about team priority.
+    </p>
+
+    <p><strong>Example:</strong></p>
+    <p>
+        Suppose a school has 25 members and needs to create a 15-person Varsity team and a 10-person JV team:
+    </p>
+    <ol>
+        <li>Varsity is generated first, selecting the 15 members who produce the highest team score</li>
+        <li>These 15 members are removed from the pool</li>
+        <li>JV is generated from the remaining 10 members (who are automatically all selected since that equals the JV team size)</li>
+    </ol>
+    <p>
+        If some members are required on JV (perhaps younger students who need development experience), they would be excluded from Varsity consideration even in step 1.
+    </p>
+
+    <h1><b>5. Limitations and Future Work</b></h1>
+
+    <p>
+        While this algorithm provides a systematic and fair approach to team generation, several limitations should be noted:
+    </p>
+
+    <ul>
+        <li><strong>Partnership effects:</strong> The current skill estimation ignores the effect of partnerships. A member might perform very differently depending on their partner, but we cannot distinguish this from the available data.</li>
+        <li><strong>Greedy optimization:</strong> The team generation algorithm is greedy and does not guarantee globally optimal solutions. More sophisticated optimization techniques (e.g., simulated annealing, genetic algorithms) could potentially find better solutions.</li>
+        <li><strong>Cold start problem:</strong> New members with no historical data receive the initial skill estimate \(a\), which may not accurately reflect their abilities.</li>
+        <li><strong>Event difficulty variation:</strong> The algorithm assumes consistent event difficulty across competitions, but some events may be harder at certain competitions than others.</li>
+    </ul>
+
+    <p>
+        Future improvements could include modeling partnership effects, using more sophisticated optimization algorithms, and incorporating additional data sources such as practice test performance trends over time.
+    </p>
+
     <hr>
-    <p>If you have ideas on how to improve the algorithm, please contact us!</p>
+    <p style="text-align: center; color: #666;">If you have ideas on how to improve the algorithm, please contact us!</p>
 </div>
 {% endblock %}

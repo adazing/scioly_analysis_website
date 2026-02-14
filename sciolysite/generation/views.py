@@ -91,11 +91,10 @@ def member_member_event_preferences_reader(member_member_event_preferences_data,
             member_2_name = remove_punctuation(row[1], False)
             member_2 = AvailableMember.objects.get(generated_competition_settings=generated_competition_settings, name=member_2_name)
             event_name = remove_punctuation(row[2], True)
-            event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings) if event_name!="" else None
-            if event==None:
-                WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2)
-            else:
-                WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2, event=event)
+            if event_name == "":
+                continue  # skip general (non-event-specific) partner preferences
+            event = AvailableEvent.objects.get(name=event_name, generated_competition_settings=generated_competition_settings)
+            WantedMemberMemberEventPair.objects.create(member1=member_1, member2=member_2, event=event)
         except:
             continue
 
@@ -111,7 +110,9 @@ def competitionSettingsFormView(request):
                                                                                          max_events_per_member = form.cleaned_data.get("max_events_per_member"),
                                                                                          min_events_per_member = form.cleaned_data.get("min_events_per_member"),
                                                                                          skill_vs_preferences = form.cleaned_data.get("skill_vs_preferences"),
-                                                                                         max_num_of_build_events_per_member = form.cleaned_data.get("max_num_of_build_events_per_member"))
+                                                                                         max_num_of_build_events_per_member = form.cleaned_data.get("max_num_of_build_events_per_member"),
+                                                                                         use_ranking = form.cleaned_data.get("use_ranking"),
+                                                                                         partner_preference_weight = form.cleaned_data.get("partner_preference_weight"))
             
             #analyze files
             available_events = form.cleaned_data["available_events"]
@@ -156,6 +157,8 @@ def generatedCompetitionSettingsEdit(request, pk):
                 generated_competition_settings.min_events_per_member = form.cleaned_data.get("min_events_per_member")
                 generated_competition_settings.skill_vs_preferences = form.cleaned_data.get("skill_vs_preferences")
                 generated_competition_settings.max_num_of_build_events_per_member = form.cleaned_data.get("max_num_of_build_events_per_member")
+                generated_competition_settings.use_ranking = form.cleaned_data.get("use_ranking")
+                generated_competition_settings.partner_preference_weight = form.cleaned_data.get("partner_preference_weight")
                 generated_competition_settings.save()
                 
                 return redirect("generatedCompetitionSettingsView", pk=generated_competition_settings.id)
@@ -354,7 +357,7 @@ def frontend_generate(request, pk):
             for m in members: # for each member on the event
                 if emi.score < c.number_of_teams_competed: # if the scores is less than the number of teams that competed
                     me_to_skill[(m, emi.event_name)].append(c)
-                    results_dict[(m, emi.event_name)] = 1-emi.score/c.number_of_teams_competed
+                    results_dict[(m, emi.event_name)] = 1-(emi.score-1)/(c.number_of_teams_competed-1)
                     data_dict[(m, emi.event_name)] = emi
         if results_dict:
             instance_to_emis[c] = results_dict
@@ -376,6 +379,7 @@ def frontend_generate(request, pk):
     num_instances = len(instance_list) # number of valid competitions
     instance_to_idx = {instance_list[i]:i for i in range(num_instances)}
     instances_with_matches = [False for x in range(num_instances)]
+    use_initial_skill = skill_data.use_initial_skill
     def custom_loss(params):
         skill_no_exp = params[-1]
         instance_loss = [0 for i in range(num_instances)]
@@ -383,6 +387,13 @@ def frontend_generate(request, pk):
         for member, event in me_to_skill: # for each member, event pair
             instances = me_to_skill[(member, event)] # instance where member, event pair competed
             num_scores = len(instances) # num instances where member, event pair competed
+            if not use_initial_skill and num_scores == 1:
+                # skip single-data-point pairs when initial skill is disabled
+                instance_idx = instance_to_idx[instances[0]]
+                if num_scores>0:
+                    instances_with_matches[instance_idx] = True
+                instance_frequency[instance_idx]+=1
+                continue
             scores = dict()
             sum_scores = 0
             for i in instances: # compute final scores
@@ -390,14 +401,14 @@ def frontend_generate(request, pk):
                 if num_scores>0:
                     instances_with_matches[instance_idx] = True
                 instance_frequency[instance_idx]+=1
-                
+
                 score = instance_to_emis[i][(member, event)]
                 weight = params[instance_idx*2]
                 bias = params[instance_idx*2+1]
                 final_score = weight * score + bias
                 scores[i]=final_score
                 sum_scores += final_score
-            
+
             for i in instances: # compute loss
                 instance_idx = instance_to_idx[i]
                 score = instance_to_emis[i][(member, event)]
@@ -409,7 +420,7 @@ def frontend_generate(request, pk):
                     pred_final_score = skill_no_exp
                 pred_score = (pred_final_score - bias) / weight
                 instance_loss[instance_idx]+=pow(pred_score-score, 2)
-        total_loss = sum([instance_loss[i]/instance_frequency[i] for i in range(num_instances)])
+        total_loss = sum([instance_loss[i]/instance_frequency[i] for i in range(num_instances) if instance_frequency[i]>0])
         return total_loss
 
     class TimeLimitCallback:
@@ -440,7 +451,7 @@ def frontend_generate(request, pk):
     member_event_pairs = [(me.member.name, me.event.name, me.rank) for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)]
 
     worst_preference_amount = max([m_e[2] for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
-    member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name if mme.event is not None else None] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)]
+    member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings, event__isnull=False)]
     required_members = []
     required_members_on_events = []
     for t in range(len(teams)):
@@ -524,7 +535,7 @@ def frontend_generate(request, pk):
             for e in available_events:
                 if e not in members_to_experience[m]:
                     members_to_experience[m][e] = 0
-                    members_to_skill_level[m][e] = skill_no_exp
+                    members_to_skill_level[m][e] = skill_no_exp if use_initial_skill else 0
 
     min_score = min([min(members_to_skill_level[m].values(), default = 0) for m in members_to_skill_level], default=0)
     max_score = max([max(members_to_skill_level[m].values(), default = 1) for m in members_to_skill_level], default=1)
@@ -687,7 +698,7 @@ def frontend_generate(request, pk):
 #     member_event_pairs = [(me.member.name, me.event.name, me.rank) for me in WantedMemberEventPair.objects.filter(member__generated_competition_settings=generated_competition_settings)]
 
 #     worst_preference_amount = max([m_e[2] for m_e in member_event_pairs]) if len(member_event_pairs)>0 else 0
-#     member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name if mme.event is not None else None] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings)]
+#     member_member_event_pairs = [[mme.member1.name, mme.member2.name, mme.event.name] for mme in WantedMemberMemberEventPair.objects.filter(member1__generated_competition_settings=generated_competition_settings, event__isnull=False)]
 #     required_members = []
 #     required_members_on_events = []
 #     for t in range(len(teams)):

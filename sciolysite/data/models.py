@@ -64,6 +64,7 @@ class SkillData(models.Model):
     experience_rate = models.FloatField(default = 0.5)
     start_date = models.DateField(default = date(date.today().year, 8, 1))
     end_date = models.DateField(default = date(date.today().year + 1, 8, 1))
+    use_initial_skill = models.BooleanField(default = True)
 # class SkillDataVal(models.Model)
 # class PracticeMember(models.Model):
 #     name = models.CharField(max_length=200)
