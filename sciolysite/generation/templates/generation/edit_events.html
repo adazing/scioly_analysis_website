@@ -1,0 +1,120 @@
+{% extends 'main.html' %}
+
+{% block bodycontent %}
+<nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Events & Event Types</li>
+    </ol>
+</nav>
+<h2 class="w-75 mx-auto mb-3">Events & Event Types</h2>
+<p class="text-muted w-75 mx-auto mb-3">Add and organize the events for this competition. Group events into event types (color-coded categories) and mark events as 3-person or Build as needed.</p>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-danger w-75 mx-auto">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+{% if not has_any_events %}
+    <div class="alert alert-info w-75 mx-auto">No events yet. Add an event type to get started.</div>
+{% endif %}
+
+<form method="POST" class="w-75 mx-auto mb-3">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_event_type">
+    <button type="submit" class="btn btn-primary">Add New Event Type</button>
+</form>
+
+{% for gd in groups_data %}
+    <div class="card w-75 mx-auto my-3">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: {{ gd.color_hex }};">
+            <div class="d-flex align-items-center gap-2">
+                <strong>Event Type #{{ forloop.counter }}</strong>
+                <form method="POST" class="d-flex align-items-center gap-1 ms-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_color">
+                    <input type="hidden" name="event_type_id" value="{{ gd.event_type.id }}">
+                    <input type="color" name="color" value="{{ gd.color_hex }}" onchange="this.form.submit();" title="Change color">
+                </form>
+            </div>
+            <a href="{% url 'deleteEventType' pk=gd.event_type.id %}" class="btn btn-danger btn-sm">Delete Event Type</a>
+        </div>
+        <div class="card-body">
+            {% if gd.events %}
+                <ul class="list-group mb-3">
+                    {% for e in gd.events %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ e.name }}
+                            <span>
+                                {% if e.needs_3_members %}<span class="badge bg-info">3-person</span>{% endif %}
+                                {% if e.is_build_event %}<span class="badge bg-warning text-dark">Build</span>{% endif %}
+                                <a href="{% url 'deleteEvent' pk=e.id %}" class="btn btn-outline-danger btn-sm ms-2">Delete</a>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <form method="POST" class="d-flex gap-2 align-items-center flex-wrap">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_event">
+                <input type="hidden" name="event_type_id" value="{{ gd.event_type.id }}">
+                <input type="text" name="event_name" class="form-control" style="max-width:200px;" placeholder="Event name" required>
+                <div class="form-check">
+                    <input type="checkbox" name="needs_3_members" class="form-check-input" id="n3_{{ gd.event_type.id }}">
+                    <label class="form-check-label" for="n3_{{ gd.event_type.id }}">3-person</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_build_event" class="form-check-input" id="build_{{ gd.event_type.id }}">
+                    <label class="form-check-label" for="build_{{ gd.event_type.id }}">Build</label>
+                </div>
+                <button type="submit" class="btn btn-secondary btn-sm">Add Event</button>
+            </form>
+        </div>
+    </div>
+{% endfor %}
+
+{% comment %} Uncategorized events section {% endcomment %}
+<div class="card w-75 mx-auto my-3">
+    <div class="card-header" style="background-color: #CCCCCC;">
+        <strong>Uncategorized</strong>
+    </div>
+    <div class="card-body">
+        {% if uncategorized_events %}
+            <ul class="list-group mb-3">
+                {% for e in uncategorized_events %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ e.name }}
+                        <span>
+                            {% if e.needs_3_members %}<span class="badge bg-info">3-person</span>{% endif %}
+                            {% if e.is_build_event %}<span class="badge bg-warning text-dark">Build</span>{% endif %}
+                            <a href="{% url 'deleteEvent' pk=e.id %}" class="btn btn-outline-danger btn-sm ms-2">Delete</a>
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No uncategorized events.</p>
+        {% endif %}
+
+        <form method="POST" class="d-flex gap-2 align-items-center flex-wrap">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_event">
+            <input type="hidden" name="event_type_id" value="none">
+            <input type="text" name="event_name" class="form-control" style="max-width:200px;" placeholder="Event name" required>
+            <div class="form-check">
+                <input type="checkbox" name="needs_3_members" class="form-check-input" id="n3_uncat">
+                <label class="form-check-label" for="n3_uncat">3-person</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_build_event" class="form-check-input" id="build_uncat">
+                <label class="form-check-label" for="build_uncat">Build</label>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Add Event</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

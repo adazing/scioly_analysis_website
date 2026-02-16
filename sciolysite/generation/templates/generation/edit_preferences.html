@@ -1,0 +1,106 @@
+{% extends 'main.html' %}
+
+{% block bodycontent %}
+<nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Members & Event Preferences</li>
+    </ol>
+</nav>
+<h2 class="w-75 mx-auto mb-3">Members & Event Preferences</h2>
+<p class="text-muted w-75 mx-auto mb-3">Add the members available for team generation and set their event preferences. Each member's preferred events are ranked in order; higher-ranked preferences are weighted more heavily when generating teams (if ranking is enabled in settings).</p>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} w-75 mx-auto">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+{% if not use_ranking %}
+    <div class="alert alert-warning w-75 mx-auto">
+        Ranking is currently disabled. The order of preferences below is preserved but does not affect scoring.
+        You can re-enable ranking in competition settings.
+    </div>
+{% endif %}
+
+<div class="form-control text-white bg-secondary mb-4">
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_member">
+        <strong>Add New Member:</strong>
+        <br><br>
+        <div class="d-flex gap-2 align-items-center justify-content-center flex-wrap">
+            <input type="text" name="member_name" class="form-control" style="max-width:200px;" placeholder="Member name" required>
+            <div class="form-check">
+                <input type="checkbox" name="is_senior" class="form-check-input" id="is_senior_new">
+                <label class="form-check-label text-white" for="is_senior_new">Senior</label>
+            </div>
+            <button type="submit" class="btn btn-light">Add Member</button>
+        </div>
+    </form>
+</div>
+
+{% if not has_members %}
+    <div class="alert alert-info w-75 mx-auto">No members yet. Add a member to get started.</div>
+{% else %}
+    {% for md in members_data %}
+        <div class="card w-75 mx-auto my-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <strong>{{ md.member.name }}</strong>
+                    {% if md.member.is_senior %}<span class="badge bg-secondary ms-1">Senior</span>{% endif %}
+                </span>
+                <a href="{% url 'deleteMember' pk=md.member.id %}" class="btn btn-danger btn-sm">Delete Member</a>
+            </div>
+            <div class="card-body">
+                {% if md.preferences %}
+                    <ol class="list-group list-group-numbered mb-3">
+                        {% for p in md.preferences %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <strong>#{{ p.rank }}</strong> - {{ p.event.name }}
+                                    {% if p.event.needs_3_members %}<span class="badge bg-info">3-person</span>{% endif %}
+                                    {% if p.event.is_build_event %}<span class="badge bg-warning text-dark">Build</span>{% endif %}
+                                </span>
+                                <span>
+                                    <form method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="move_up">
+                                        <input type="hidden" name="pref_id" value="{{ p.id }}">
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm" {% if forloop.first %}disabled{% endif %}>&uarr;</button>
+                                    </form>
+                                    <form method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="move_down">
+                                        <input type="hidden" name="pref_id" value="{{ p.id }}">
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm" {% if forloop.last %}disabled{% endif %}>&darr;</button>
+                                    </form>
+                                    <a href="{% url 'deletePreference' pk=p.id %}" class="btn btn-outline-danger btn-sm">Delete</a>
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                {% else %}
+                    <p class="text-muted">No preferences yet.</p>
+                {% endif %}
+
+                {% if md.available_events %}
+                    <form method="POST" class="d-flex gap-2 align-items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_preference">
+                        <input type="hidden" name="member_id" value="{{ md.member.id }}">
+                        <select name="event_id" class="form-select" style="max-width:250px;">
+                            {% for e in md.available_events %}
+                                <option value="{{ e.id }}">{{ e.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-secondary btn-sm">Add Preference</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -1,11 +1,29 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
-    <a href="{% url 'competitionView' team.competition.id %}" class="btn btn-primary">Back</a>
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'competitionView' team.competition.id %}">{{team.competition.name}}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{team.name}}</li>
+        </ol>
+    </nav>
 
-    <h2 class="w-75 mx-auto my-4">{{team.name}}</h2>
-    <div class="card w-75 mx-auto my-4">
-      <table class="table table-hover">
+    <div class="bg-light p-5 mb-4 rounded-3">
+        <h1 class="display-4">{{team.name}}</h1>
+        <p class="lead">{{team.competition.name}}</p>
+        {% if team.notes %}<p class="text-muted">{{team.notes}}</p>{% endif %}
+        <hr class="my-4">
+        <p>
+            <a href="{% url 'editTeamResultsView' pk=team.id %}" class="btn btn-primary">Edit Team</a>
+            <a href="{% url 'teamDeleteView' pk=team.id %}" class="btn btn-danger">Delete Team</a>
+            <button class="btn btn-secondary" onclick="window.print()">Print</button>
+        </p>
+    </div>
+
+    <h4 class="w-75 mx-auto mb-3">Event Results</h4>
+    <div class="card w-75 mx-auto mb-4">
+      <table class="table table-hover mb-0">
         <thead>
           <tr>
             <th scope="col">Event</th>
@@ -15,24 +33,28 @@
             <th scope="col">Score</th>
           </tr>
         </thead>
+        <tbody>
           {% for x in results %}
-          <tr scope="row">
-              {% comment %} {% for y in x%} {% endcomment %}
+          <tr>
               <td>{{ x.0 }}</td>
               <td>{{ x.1 }}</td>
               <td>{{ x.2 }}</td>
               <td>{{ x.3 }}</td>
               <td style="background: hsl(200,100%,{{x.5.0}}%); color: {{x.5.1}};">{{ x.4 }}</td>
-              {% comment %} {% endfor %} {% endcomment %}
           </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted text-center py-3">No event results yet.</td></tr>
           {% endfor %}
-        </table>
+        </tbody>
+      </table>
     </div>
 
     <div style="break-after:page"></div>
 
-    <div class="card w-75 mx-auto my-4">
-      <table class="table table-hover">
+    {% if results2 %}
+    <h4 class="w-75 mx-auto mb-3">Member Summary</h4>
+    <div class="card w-75 mx-auto mb-4">
+      <table class="table table-hover mb-0">
         <thead>
           <tr>
             <th scope="col">Member</th>
@@ -41,17 +63,102 @@
             {% endfor %}
           </tr>
         </thead>
+        <tbody>
         {% for key, value in results2.items %}
-        <tr scope="row">
+        <tr>
         <td>{{key}}</td>
         {% for event in value %}
         <td style="background: hsl(200,100%,{{event.1}}%); color: {{event.2}};">{{event.0}}</td>
         {% endfor%}
-        <tr>
+        </tr>
         {% endfor %}
+        </tbody>
       </table>
     </div>
-    {% comment %} <div class="card w-75 mx-auto my-4">
-      <button onclick="window.print();return false;" class="btn btn-primary">Print</button>
-    </div> {% endcomment %}
+    {% endif %}
+
+    {% if analysis %}
+    <div style="break-after:page"></div>
+    <h4 class="w-75 mx-auto mb-3">Analysis</h4>
+    <div class="card w-75 mx-auto mb-4">
+      <div class="card-body">
+        <div class="row text-center mb-3">
+          <div class="col">
+            <strong>Avg Placement</strong><br>{{ analysis.avg_placement }}
+          </div>
+          <div class="col">
+            <strong>Median</strong><br>{{ analysis.p50 }}
+          </div>
+          <div class="col">
+            <strong>25th Pctl</strong><br>{{ analysis.p25 }}
+          </div>
+          <div class="col">
+            <strong>75th Pctl</strong><br>{{ analysis.p75 }}
+          </div>
+          <div class="col">
+            <strong>DQs</strong><br>{{ analysis.dq_count }}
+          </div>
+        </div>
+        <p class="text-muted small mb-3">Percentiles exclude disqualified events. Lower placement = better.</p>
+        <hr>
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Best Events <small class="text-muted">(&le; 25th percentile)</small></h6>
+            {% if analysis.best_events %}
+            <ul class="mb-0">
+              {% for e in analysis.best_events %}
+              <li>{{ e.event }} &mdash; {{ e.score }}{% if e.members %} ({{ e.members }}){% endif %}</li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small">No events in this range.</p>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <h6>Worst Events <small class="text-muted">(&ge; 75th percentile)</small></h6>
+            {% if analysis.worst_events %}
+            <ul class="mb-0">
+              {% for e in analysis.worst_events %}
+              <li>{{ e.event }} &mdash; {{ e.score }}{% if e.members %} ({{ e.members }}){% endif %}</li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small">No events in this range.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% if analysis.dq_events %}
+        <hr>
+        <h6>Disqualified Events</h6>
+        <ul class="mb-0">
+          {% for e in analysis.dq_events %}
+          <li>{{ e.event }}{% if e.members %} ({{ e.members }}){% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <hr>
+        <h6>Member Performance</h6>
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Avg Placement</th>
+              <th># Events</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in analysis.members %}
+            <tr>
+              <td>{{ m.name }}</td>
+              <td>{{ m.avg }}</td>
+              <td>{{ m.num_events }}</td>
+              <td><span class="badge bg-{{ m.badge }}">{{ m.highlight }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
     {% endblock %}

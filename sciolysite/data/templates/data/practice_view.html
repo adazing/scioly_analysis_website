@@ -1,61 +1,93 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
-    <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{practice.name}}</li>
+        </ol>
+    </nav>
+
     <div class="bg-light p-5 mb-4 rounded-3">
-      <h1 class="display-4">Practice {{practice.event_name}}</h1>
-      <p class="lead">{{practice.total_points}} max points</p>
+      <h1 class="display-4">{{practice.name}}</h1>
+      <p class="lead">{{practice.event_name}} &mdash; {{practice.total_points}} max points</p>
       <hr class="my-4">
       <p>{{practice.date}}</p>
       <p>
-          <a class="btn btn-primary btn-lg" href="{% url 'practiceEditView' pk=practice.id %}" role="button">Edit Practice {{practice.event_name}}</a>
-          <a class="btn btn-danger btn-lg" href="{% url 'practiceDeleteView' pk=practice.id %}" role="button">Delete Practice {{practice.event_name}}</a>
+          <a class="btn btn-primary" href="{% url 'practiceEditView' pk=practice.id %}">Edit Practice</a>
+          <a class="btn btn-primary" href="{% url 'editPracticeResultsView' pk=practice.id %}">Edit Results</a>
+          <a class="btn btn-danger" href="{% url 'practiceDeleteView' pk=practice.id %}">Delete Practice</a>
+          <button class="btn btn-secondary" onclick="window.print()">Print</button>
       </p>
     </div>
 
-    <h2 class="w-75 mx-auto my-4">{{practice.event_name}}</h2>
-    <div class="card w-75 mx-auto my-4">
-      <table class="table table-hover">
+    <h4 class="w-75 mx-auto mb-3">Results</h4>
+    <div class="card w-75 mx-auto mb-4">
+      <table class="table table-hover mb-0">
         <thead>
           <tr>
             <th scope="col">Member</th>
             <th scope="col">Points</th>
           </tr>
         </thead>
+        <tbody>
           {% for x in results %}
-          <tr scope="row">
-              {% comment %} {% for y in x%} {% endcomment %}
+          <tr>
               <td>{{ x.0 }}</td>
               <td style="background: hsl(200,100%,{{x.2.0}}%); color: {{x.2.1}};">{{ x.1 }}</td>
-              {% comment %} {% endfor %} {% endcomment %}
           </tr>
+          {% empty %}
+          <tr><td colspan="2" class="text-muted text-center py-3">No results yet.</td></tr>
           {% endfor %}
-        </table>
+        </tbody>
+      </table>
     </div>
 
-    {% comment %} <div style="break-after:page"></div>
-
-    <div class="card w-75 mx-auto my-4">
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th scope="col">Member</th>
-            {% for i in max_events_per_member %}
-            <th scope="col">Event {{i}}</th>
+    {% if analysis %}
+    <h4 class="w-75 mx-auto mb-3">Analysis</h4>
+    <div class="card w-75 mx-auto mb-4">
+      <div class="card-body">
+        <div class="row text-center mb-3">
+          <div class="col">
+            <strong>Avg Score</strong><br>{{ analysis.avg_score }} ({{ analysis.avg_pct }}%)
+          </div>
+          <div class="col">
+            <strong>Median</strong><br>{{ analysis.p50 }}
+          </div>
+          <div class="col">
+            <strong>25th Pctl</strong><br>{{ analysis.p25 }}
+          </div>
+          <div class="col">
+            <strong>75th Pctl</strong><br>{{ analysis.p75 }}
+          </div>
+          <div class="col">
+            <strong># Members</strong><br>{{ analysis.num_members }}
+          </div>
+        </div>
+        <p class="text-muted small mb-3">Higher score = better. Percentiles based on points scored.</p>
+        <hr>
+        <h6>Member Performance</h6>
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Score</th>
+              <th>Percentage</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in analysis.members %}
+            <tr>
+              <td>{{ m.name }}</td>
+              <td>{{ m.score }}</td>
+              <td>{{ m.pct }}%</td>
+              <td><span class="badge bg-{{ m.badge }}">{{ m.highlight }}</span></td>
+            </tr>
             {% endfor %}
-          </tr>
-        </thead>
-        {% for key, value in results2.items %}
-        <tr scope="row">
-        <td>{{key}}</td>
-        {% for event in value %}
-        <td style="background: hsl(200,100%,{{event.1}}%); color: {{event.2}};">{{event.0}}</td>
-        {% endfor%}
-        <tr>
-        {% endfor %}
-      </table>
-    </div> {% endcomment %}
-    {% comment %} <div class="card w-75 mx-auto my-4">
-      <button onclick="window.print();return false;" class="btn btn-primary">Print</button>
-    </div> {% endcomment %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
     {% endblock %}

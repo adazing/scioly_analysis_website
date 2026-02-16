@@ -1,36 +1,46 @@
 {% extends 'main.html' %}
 
     {% block bodycontent %}
-    <a href="{% url 'competitionListView' %}" class="btn btn-primary">Back</a>
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{competition.name}}</li>
+        </ol>
+    </nav>
 
-        <div class="bg-light p-5 mb-4 rounded-3">
-            <h1 class="display-4">{{competition.name}}</h1>
-            <p class="lead">{{competition.number_of_teams_competed}} teams competed in total</p>
-            <hr class="my-4">
-            <p>{{competition.date}}</p>
-            <p>
-                <a class="btn btn-primary btn-lg" href="{% url 'competitionEditView' pk=competition.id %}" role="button">Edit {{competition.name}}</a>
-                <a class="btn btn-danger btn-lg" href="{% url 'competitionDeleteView' pk=competition.id %}" role="button">Delete {{competition.name}}</a>
-            </p>
+    <div class="bg-light p-5 mb-4 rounded-3">
+        <h1 class="display-4">{{competition.name}}</h1>
+        <p class="lead">{{competition.number_of_teams_competed}} teams competed in total</p>
+        <hr class="my-4">
+        <p>{{competition.date}}</p>
+        <p>
+            <a class="btn btn-primary" href="{% url 'competitionEditView' pk=competition.id %}">Edit Competition</a>
+            <a class="btn btn-danger" href="{% url 'competitionDeleteView' pk=competition.id %}">Delete Competition</a>
+        </p>
+    </div>
+
+    <div class="w-75 mx-auto mb-3 d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Teams</h4>
+        <a href="{% url 'teamCreateView' pk=competition.id %}" class="btn btn-primary">Add Team Data</a>
+    </div>
+    {% for t in team_list %}
+    <div class="card w-75 mx-auto mb-3">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <!-- <h5 class="card-title mb-0">{{t.name}}</h5> -->
+            <div>
+                <h5 class="card-title mb-0">{{t.name}}</h5>
+                <small class="text-muted">{{t.notes}}</small>
+            </div>
+            <div>
+                <a class="btn btn-secondary btn-sm" href="{% url 'teamView' pk=t.id %}">View</a>
+                <a class="btn btn-info btn-sm" href="{% url 'editTeamResultsView' pk=t.id %}">Edit Team</a>
+                <a class="btn btn-danger btn-sm" href="{% url 'teamDeleteView' pk=t.id %}">Delete</a>
+            </div>
         </div>
-        <div class="card w-75 mx-auto my-4"><a href="{% url 'teamCreateView' pk=competition.id %}" class="btn btn-primary">Add Team Data</a></div>
-        {% comment %} <ul class="list-group list-group-flush"> {% endcomment %}
-            {% for t in team_list %}
-            <div class="card w-75 mx-auto my-3">
-                <div class="card-body">
-                  <h5 class="card-title">{{t.name}}</h5>
-                  <a class="btn btn-secondary" href="{% url 'teamView' pk=t.id %}">View</a>
-                  <a class="btn btn-danger" href="{% url 'teamDeleteView' pk=t.id %}">Delete</a>
-                </div>
-              </div>
-            {% comment %} <li class="list-group-item h5">
-                <p class="display-5">{{t.name}}</p>
-                <p>
-                    <a class="btn btn-secondary" href="{% url 'teamView' pk=t.id %}">View</a>
-                    <a class="btn btn-danger" href="{% url 'teamDeleteView' pk=t.id %}">Delete</a>
-
-                </p>
-            </li> {% endcomment %}
-            {% endfor %}
-        {% comment %} </ul> {% endcomment %}
+    </div>
+    {% empty %}
+    <div class="card w-75 mx-auto mb-3">
+        <div class="card-body text-center text-muted py-4">No teams yet. Add team data above.</div>
+    </div>
+    {% endfor %}
     {% endblock %}

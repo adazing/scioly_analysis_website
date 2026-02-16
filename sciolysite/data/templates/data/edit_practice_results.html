@@ -1,0 +1,77 @@
+{% extends 'main.html' %}
+
+    {% block bodycontent %}
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'practiceView' pk=practice.id %}">{{practice.name}}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit Results</li>
+        </ol>
+    </nav>
+
+    <h2 class="w-75 mx-auto mb-4">Edit Results &mdash; {{practice.name}}</h2>
+
+    {% if error %}
+    <div class="alert alert-danger w-75 mx-auto" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <h5 class="w-75 mx-auto mb-3">Add Member Result</h5>
+    <div class="card w-75 mx-auto mb-4">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_result">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Member Name</label>
+                        <input type="text" class="form-control" name="member_name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Points Scored</label>
+                        <input type="number" class="form-control" name="points_scored" min="0" step="any" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Result</button>
+            </form>
+        </div>
+    </div>
+
+    <h5 class="w-75 mx-auto mb-3">Existing Results</h5>
+    <div class="card w-75 mx-auto mb-4">
+        {% if results %}
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="edit_result">
+                        <input type="hidden" name="empi_id" value="{{ r.id }}">
+                        <td><input type="text" class="form-control form-control-sm" name="member_name" value="{{ r.member_name }}" required></td>
+                        <td><input type="number" class="form-control form-control-sm" name="points_scored" value="{{ r.points_scored }}" min="0" step="any" required style="width:120px;"></td>
+                        <td class="text-nowrap">
+                            <button type="submit" class="btn btn-sm btn-success">Save</button>
+                    </form>
+                    <form method="POST" action="{% url 'deletePracticeResult' pk=r.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this result?')">Delete</button>
+                    </form>
+                        </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="card-body text-center text-muted py-4">
+            No results yet. Use the form above to add some.
+        </div>
+        {% endif %}
+    </div>
+    {% endblock %}

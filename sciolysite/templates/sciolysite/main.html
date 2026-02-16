@@ -31,7 +31,18 @@
         body{
             -webkit-print-color-adjust:exact !important;
             print-color-adjust:exact !important;
+            padding-top: 56px;
           }
+        .breadcrumb{
+            background-color: #e9ecef;
+            padding: 0.6rem 1rem;
+            border-radius: 0.375rem;
+        }
+        @media print {
+            .navbar, .breadcrumb, .btn, nav[aria-label="breadcrumb"] { display: none !important; }
+            .bg-light { background: none !important; padding: 1rem !important; }
+            body { padding-top: 0 !important; }
+        }
     {% block stylecontent %}
 
     {% endblock stylecontent %}

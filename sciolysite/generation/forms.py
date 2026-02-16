@@ -9,17 +9,17 @@ import csv
 # from django.shortcuts import get_object_or_404, redirect
 
 
-def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
+def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces, then title-case
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "") if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 def remove_team_name_punctuation(input_string):
     input_string = str(input_string)
-    input_string = "".join([c for c in input_string.lower() if c.isalpha() or c==" "])
+    input_string = "".join([c for c in input_string if c.isalpha() or c==" "])
     return input_string
 
 class MultipleChoiceAnyField(forms.MultipleChoiceField):
@@ -29,27 +29,10 @@ class MultipleChoiceAnyField(forms.MultipleChoiceField):
         return True
 
 class CompetitionSettingsForm(ModelForm):
-    available_events = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=True)
-    # File Structure:
-    # Event1,Event2 (3),Event3,Event4 <--- these are event types, all the events in each row are of the same type
-    # Event5,Event6,Event7 (3), <--- (3) means that the events can hold up to 3 people (above the normal 2 ppl per event)
-    # ...
+    available_events = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
     conflicting_events = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
-    # File Structure:
-    # Event1,Event2,Event4 <--- these are conflict times, all the events in each row conflict each other (are in the same timeblock)
-    # Event3,Event7,
-    # ...
-    member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=True)
-    # File Structure:
-    # Member1 (S),Event1,Event4,Event2 <--- these are the ranked events people want per person
-    # Member2 (O),Event3,Event6 (*),Event5 (*) <--- (*) means that it is required
-    # Member3,,, <--- if no preferences, make everyone have no event rankings
-    #  ^ key: (S)=senior, (O)=officer, (R)=required member
-    # ...
+    member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
     member_member_event_preferences_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), required=False)
-    # File Structure:
-    # Member1,Member2,Event3 <--- this are a list of people who want to be together on a certain event
-    # (rows without a specific event are skipped)
     
     
     # officers=MultipleChoiceAnyField(required=False)
@@ -69,86 +52,84 @@ class CompetitionSettingsForm(ModelForm):
             "max_num_of_build_events_per_member",
             "use_ranking",
             "partner_preference_weight",
+            "randomization",
         ]
-        labels= {
-            "name":"Name of upcoming competition",
+        labels = {
+            "name": "Name of upcoming competition",
             "skill_vs_preferences": "Event Preference Weight",
             "use_ranking": "Use Ranked Event Preferences",
             "partner_preference_weight": "Partner Preference Weight",
+            "randomization": "Randomization",
+        }
+        help_texts = {
+            "max_events_per_member": "The most events any single member can be assigned to.",
+            "min_events_per_member": "The fewest events any single member can be assigned to. Must be at least 1.",
+            "skill_vs_preferences": "How much weight to give event preferences when generating teams. 0 = ignore preferences (skill only), 1 = full weight on preferences.",
+            "max_num_of_build_events_per_member": "The most build events any single member can be assigned to.",
+            "use_ranking": "When enabled, higher-ranked preferences count more than lower-ranked ones. When disabled, all listed preferences are weighted equally.",
+            "partner_preference_weight": "How much weight to give partner preferences (members wanting to be on the same event together). 0 = ignore, 1 = full weight.",
+            "randomization": "Adds random noise to each member-event assignment score. 0 = no randomness (deterministic), 1 = maximum randomness. Uses a seeded RNG so regenerating produces the same result.",
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
-            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5}),
-            'partner_preference_weight' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "step":0.05, "value":0.05}),
+            'skill_vs_preferences': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "value": 0.5}),
+            'partner_preference_weight': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "step": 0.05, "value": 0.05}),
+            'randomization': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "step": 0.05, "value": 0}),
         }
 
-    # def clean_min_events_per_member(self):
-    #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
     def clean_skill_vs_preferences(self):
         skill_vs_preferences = self.cleaned_data.get("skill_vs_preferences")
-        if skill_vs_preferences>1 or skill_vs_preferences<0:
+        if skill_vs_preferences > 1 or skill_vs_preferences < 0:
             raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
         return skill_vs_preferences
     def clean_partner_preference_weight(self):
         partner_preference_weight = self.cleaned_data.get("partner_preference_weight")
-        if partner_preference_weight<0 or partner_preference_weight>1:
+        if partner_preference_weight < 0 or partner_preference_weight > 1:
             raise forms.ValidationError("Partner preference weight should be between 0 and 1")
         return partner_preference_weight
+    def clean_randomization(self):
+        randomization = self.cleaned_data.get("randomization")
+        if randomization < 0 or randomization > 1:
+            raise forms.ValidationError("Randomization should be between 0 and 1")
+        return randomization
     def clean_min_events_per_member(self):
         min_events_per_member = self.cleaned_data.get("min_events_per_member")
-        if min_events_per_member<1:
+        if min_events_per_member < 1:
             raise forms.ValidationError("The minimum events per member cannot be smaller than 1.")
         return min_events_per_member
-    # def clean_max_events_per_member(self):
-    #     max_events_per_member = self.cleaned_data.get("max_events_per_member")
-        
+
     
     def clean_available_events(self, *args, **kwargs):
         available_events = self.cleaned_data.get("available_events")
-        
+        if available_events is None:
+            return None
+
         if available_events.size > 1 * 1024 * 1024:  # 1MB limit
             raise forms.ValidationError("File size must be under 1MB.")
 
-        
-        # check if ending is csv file
         if not available_events.name.endswith(".csv"):
             raise forms.ValidationError("This is not a valid csv file.")
-        
-        # try to read the file and validate
+
         try:
-            available_events.seek(0)  # Reset file pointer to start
+            available_events.seek(0)
             available_events_content = io.TextIOWrapper(available_events.file, encoding='utf-8').read()
             reader = csv.reader(available_events_content.splitlines(), delimiter=',')
         except:
             raise forms.ValidationError("This is not a valid csv file.")
-        
-        row_num = 0
-        list_of_events=[]
-        for i, row in enumerate(reader):
-            # check if row length changes --> tampering with file?
-            if i==0:
-                row_length=len(row)
-            elif len(row)!=row_length:
-                raise forms.ValidationError("This is not a valid csv file.")
-            
-            # check if first cell of row has an event.
-            if remove_punctuation(row[0], True)=="":
-                raise forms.ValidationError("One of the rows has no event in the first cell.")
 
-            # check for repeats
+        list_of_events = []
+        for i, row in enumerate(reader):
+            # skip empty rows
+            if not row or remove_punctuation(row[0], True) == "":
+                continue
             for e in row:
                 event_name = remove_punctuation(e, True)
                 if event_name != "":
                     if event_name in list_of_events:
-                        raise forms.ValidationError("Some of the events are repeated!")
+                        raise forms.ValidationError(f"Duplicate event name found: \"{event_name}\".")
                     list_of_events.append(event_name)
                 else:
                     break
-            row_num += 1
-        if row_num <= 0:
-            raise forms.ValidationError("Not enough valid rows.")
-        elif row_num >= 50:
-            raise forms.ValidationError("Cannot have more than 50 rows.")
 
         return available_events_content
     
@@ -160,95 +141,61 @@ class CompetitionSettingsForm(ModelForm):
             if conflicting_events.size > 1 * 1024 * 1024:  # 1MB limit
                 raise forms.ValidationError("File size must be under 1MB.")
 
-            
-            # check if ending is csv file
             if not conflicting_events.name.endswith(".csv"):
                 raise forms.ValidationError("This is not a valid csv file.")
-            
-            # try to read the file and validate
+
             try:
-                conflicting_events.seek(0)  # Reset file pointer to start
+                conflicting_events.seek(0)
                 conflicting_events_content = io.TextIOWrapper(conflicting_events.file, encoding='utf-8').read()
                 reader = csv.reader(conflicting_events_content.splitlines(), delimiter=',')
             except:
                 raise forms.ValidationError("This is not a valid csv file.")
-            
+
             list_of_events = []
-            row_num = 0
             for i, row in enumerate(reader):
-                # check if row length changes --> tampering with file?
-                if i==0:
-                    row_length=len(row)
-                elif len(row)!=row_length:
-                    raise forms.ValidationError("This is not a valid csv file.")
-                
-                # check if first cell of row have event.
-                if remove_punctuation(row[0], True)=="":
-                    raise forms.ValidationError("One of the rows has no event in the first cell.")
-                # if remove_punctuation(row[1], True)=="":
-                #     raise forms.ValidationError("One of the rows only has one event.")
-                # check for repeats
+                # skip empty rows
+                if not row or remove_punctuation(row[0], True) == "":
+                    continue
                 for e in row:
                     event_name = remove_punctuation(e, True)
                     if event_name != "":
                         if event_name in list_of_events:
-                            raise forms.ValidationError("Some of the events are repeated!")
+                            raise forms.ValidationError(f"Duplicate event name found in conflicts: \"{event_name}\".")
                         list_of_events.append(event_name)
                     else:
                         break
-                row_num += 1
-            if row_num <= 0:
-                raise forms.ValidationError("Not enough valid rows.")
-            elif row_num >= 50:
-                raise forms.ValidationError("Cannot have more than 50 rows.")
 
         return conflicting_events_content
     
     def clean_member_event_preferences_data(self, *args, **kwargs):
         member_event_preferences = self.cleaned_data.get("member_event_preferences_data")
+        if member_event_preferences is None:
+            return None
 
         if member_event_preferences.size > 1 * 1024 * 1024:  # 1MB limit
             raise forms.ValidationError("File size must be under 1MB.")
 
-        
-        # check if ending is csv file
         if not member_event_preferences.name.endswith(".csv"):
             raise forms.ValidationError("This is not a valid csv file.")
-        
-        # try to read the file and validate
+
         try:
-            member_event_preferences.seek(0)  # Reset file pointer to start
+            member_event_preferences.seek(0)
             member_event_preferences_content = io.TextIOWrapper(member_event_preferences.file, encoding='utf-8').read()
             reader = csv.reader(member_event_preferences_content.splitlines(), delimiter=',')
-            # next(reader)
         except:
             raise forms.ValidationError("This is not a valid csv file.")
-        
-        row_num = 0
+
         list_of_members = []
         for i, row in enumerate(reader):
-            # check if row length is changes --> tampering with file?
-            if i==0:
-                row_length=len(row)
-            elif len(row)!=row_length:
-                raise forms.ValidationError("This is not a valid csv file.")
-            
-            if row_length <1:
-                raise forms.ValidationError("This file needs at least one column to hold member names.")
-            
-            # check if member is formatted correctly
+            if not row:
+                continue
             member_name = remove_punctuation(row[0], False)
+            # skip empty rows
             if member_name == "":
-                raise forms.ValidationError("One of the rows does not state the member in the first cell.")
-            else:
-                if member_name in list_of_members:
-                    raise forms.ValidationError(f"There are some repeating members! (found {member_name} twice!)")
-                list_of_members.append(member_name)
-                row_num += 1
-        if row_num <= 0:
-            raise forms.ValidationError("Not enough valid rows.")
-        elif row_num >= 200:
-            raise forms.ValidationError("Cannot have more than 200 rows.")
+                continue
+            if member_name in list_of_members:
+                raise forms.ValidationError(f"Duplicate member name found: \"{member_name}\".")
+            list_of_members.append(member_name)
 
         return member_event_preferences_content
 
@@ -260,56 +207,49 @@ class CompetitionSettingsForm(ModelForm):
             if member_member_event_preferences.size > 1 * 1024 * 1024:  # 1MB limit
                 raise forms.ValidationError("File size must be under 1MB.")
 
-            
-            # check if ending is csv file
             if not member_member_event_preferences.name.endswith(".csv"):
                 raise forms.ValidationError("This is not a valid csv file.")
-            
-            # try to read the file and validate
+
             try:
-                member_member_event_preferences.seek(0)  # Reset file pointer to start
+                member_member_event_preferences.seek(0)
                 member_member_event_preferences_content = io.TextIOWrapper(member_member_event_preferences.file, encoding='utf-8').read()
                 reader = csv.reader(member_member_event_preferences_content.splitlines(), delimiter=',')
-                # next(reader)
             except:
                 raise forms.ValidationError("This is not a valid csv file.")
-            
-            # list_of_members = []
-            row_num = 0
+
             for i, row in enumerate(reader):
-                # check if row length is changes --> tampering with file?
-                if i==0:
-                    row_length=len(row)
-                elif len(row)!=row_length:
-                    raise forms.ValidationError("This is not a valid csv file.")
-                
-                if row_length <2:
-                    raise forms.ValidationError("The max number of cells in a row should not be less than 2.")
-                elif row_length > 3:
-                    raise forms.ValidationError("The max number of cells in a row should not be greater than 3.")
-
-                # check if member1 is formatted correctly
+                if not row:
+                    continue
+                # need at least 2 columns for member1 and member2
+                if len(row) < 2:
+                    raise forms.ValidationError(f"Row {i+1} has fewer than 2 columns. Each row needs at least member 1 and member 2.")
                 member1_name = remove_punctuation(row[0], False)
-                if member1_name == "":
-                    raise forms.ValidationError("One of the rows does not state the member in the first cell.")
-
-                # check if member2 is formatted correctly
                 member2_name = remove_punctuation(row[1], False)
+                # skip rows where both members are empty
+                if member1_name == "" and member2_name == "":
+                    continue
+                if member1_name == "":
+                    raise forms.ValidationError(f"Row {i+1} is missing a name in the first column.")
                 if member2_name == "":
-                    raise forms.ValidationError("One of the rows does not state the member in the second cell.")
-                row_num += 1
-            if row_num <= 0:
-                raise forms.ValidationError("Not enough valid rows.")
-            elif row_num >= 100:
-                raise forms.ValidationError("Cannot have more than 100 rows.")
+                    raise forms.ValidationError(f"Row {i+1} is missing a name in the second column.")
         return member_member_event_preferences_content
     
     def clean(self):
-        max_events_per_member = self.cleaned_data.get("max_events_per_member")
-        min_events_per_member = self.cleaned_data.get("min_events_per_member")
-        if max_events_per_member < min_events_per_member:
-            raise forms.ValidationError("The maximum events per member cannot be smaller than the minimum events per member.")
-        return self.cleaned_data
+        cleaned_data = super().clean()
+        max_events_per_member = cleaned_data.get("max_events_per_member")
+        min_events_per_member = cleaned_data.get("min_events_per_member")
+        if max_events_per_member is not None and min_events_per_member is not None:
+            if max_events_per_member < min_events_per_member:
+                raise forms.ValidationError("The maximum events per member cannot be smaller than the minimum events per member.")
+        available_events = cleaned_data.get("available_events")
+        conflicting_events = cleaned_data.get("conflicting_events")
+        member_event_preferences_data = cleaned_data.get("member_event_preferences_data")
+        member_member_event_preferences_data = cleaned_data.get("member_member_event_preferences_data")
+        if conflicting_events and not available_events:
+            self.add_error("conflicting_events", "You must upload Available Events to use Conflicting Events.")
+        if member_member_event_preferences_data and not member_event_preferences_data:
+            self.add_error("member_member_event_preferences_data", "You must upload Member Event Preferences to use Partner Preferences.")
+        return cleaned_data
 
 
 class CompetitionSettingsEditForm(ModelForm):
@@ -325,35 +265,50 @@ class CompetitionSettingsEditForm(ModelForm):
             "max_num_of_build_events_per_member",
             "use_ranking",
             "partner_preference_weight",
+            "randomization",
         ]
-        labels= {
-            "name":"Name of upcoming competition",
+        labels = {
+            "name": "Name of upcoming competition",
             "skill_vs_preferences": "Event Preference Weight",
             "use_ranking": "Use Ranked Event Preferences",
             "partner_preference_weight": "Partner Preference Weight",
+            "randomization": "Randomization",
+        }
+        help_texts = {
+            "max_events_per_member": "The most events any single member can be assigned to.",
+            "min_events_per_member": "The fewest events any single member can be assigned to. Must be at least 1.",
+            "skill_vs_preferences": "How much weight to give event preferences when generating teams. 0 = ignore preferences (skill only), 1 = full weight on preferences.",
+            "max_num_of_build_events_per_member": "The most build events any single member can be assigned to.",
+            "use_ranking": "When enabled, higher-ranked preferences count more than lower-ranked ones. When disabled, all listed preferences are weighted equally.",
+            "partner_preference_weight": "How much weight to give partner preferences (members wanting to be on the same event together). 0 = ignore, 1 = full weight.",
+            "randomization": "Adds random noise to each member-event assignment score. 0 = no randomness (deterministic), 1 = maximum randomness. Uses a seeded RNG so regenerating produces the same result.",
         }
         widgets = {
             'notes': forms.Textarea(attrs={'cols': 20, 'rows': 5}),
-            'skill_vs_preferences' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.5}),
-            'partner_preference_weight' : forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "step":0.05, "value":0.05}),
+            'skill_vs_preferences': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "value": 0.5}),
+            'partner_preference_weight': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "step": 0.05, "value": 0.05}),
+            'randomization': forms.NumberInput(attrs={"type": "range", "min": 0, "max": 1, "step": 0.05, "value": 0}),
         }
 
-    # def clean_min_events_per_member(self):
-    #     min_events_per_member = self.cleaned_data.get("min_events_per_member")
     def clean_skill_vs_preferences(self):
         skill_vs_preferences = self.cleaned_data.get("skill_vs_preferences")
-        if skill_vs_preferences>1 or skill_vs_preferences<0:
+        if skill_vs_preferences > 1 or skill_vs_preferences < 0:
             raise forms.ValidationError("Skill vs preferences should be between 0 and 1")
         return skill_vs_preferences
     def clean_partner_preference_weight(self):
         partner_preference_weight = self.cleaned_data.get("partner_preference_weight")
-        if partner_preference_weight<0 or partner_preference_weight>1:
+        if partner_preference_weight < 0 or partner_preference_weight > 1:
             raise forms.ValidationError("Partner preference weight should be between 0 and 1")
         return partner_preference_weight
+    def clean_randomization(self):
+        randomization = self.cleaned_data.get("randomization")
+        if randomization < 0 or randomization > 1:
+            raise forms.ValidationError("Randomization should be between 0 and 1")
+        return randomization
 
     def clean_min_events_per_member(self):
         min_events_per_member = self.cleaned_data.get("min_events_per_member")
-        if min_events_per_member<1:
+        if min_events_per_member < 1:
             raise forms.ValidationError("The minimum events per member cannot be smaller than 1.")
         return min_events_per_member
     
@@ -572,4 +527,81 @@ class RequirementsForm(ModelForm):
 
 class DeleteConfirmationForm(forms.Form):
     confirm = forms.BooleanField()
-    
+
+
+class AddEventForm(forms.Form):
+    name = forms.CharField(max_length=200)
+    needs_3_members = forms.BooleanField(required=False, label="3-person event")
+    is_build_event = forms.BooleanField(required=False, label="Build event")
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        name = remove_punctuation(name, True)
+        if not name:
+            raise forms.ValidationError("Event name is not valid.")
+        return name
+
+
+class AddEventTypeForm(forms.Form):
+    pass
+
+
+class EventTypeColorForm(forms.Form):
+    color = forms.CharField(max_length=7)
+
+
+class AddMemberForm(forms.Form):
+    name = forms.CharField(max_length=200)
+    is_senior = forms.BooleanField(required=False, label="Senior")
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        name = remove_punctuation(name, False)
+        if not name:
+            raise forms.ValidationError("Member name is not valid.")
+        return name
+
+
+class AddPreferenceForm(forms.Form):
+    event = forms.ModelChoiceField(queryset=AvailableEvent.objects.none())
+
+    def __init__(self, *args, **kwargs):
+        event_queryset = kwargs.pop('event_queryset', AvailableEvent.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields['event'].queryset = event_queryset
+
+
+class AddPartnerPreferenceForm(forms.Form):
+    member1 = forms.ModelChoiceField(queryset=AvailableMember.objects.none(), label="Member 1")
+    member2 = forms.ModelChoiceField(queryset=AvailableMember.objects.none(), label="Member 2")
+    event = forms.ModelChoiceField(queryset=AvailableEvent.objects.none(), label="Event")
+
+    def __init__(self, *args, **kwargs):
+        member_queryset = kwargs.pop('member_queryset', AvailableMember.objects.none())
+        event_queryset = kwargs.pop('event_queryset', AvailableEvent.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields['member1'].queryset = member_queryset
+        self.fields['member2'].queryset = member_queryset
+        self.fields['event'].queryset = event_queryset
+
+    def clean(self):
+        cleaned_data = super().clean()
+        member1 = cleaned_data.get('member1')
+        member2 = cleaned_data.get('member2')
+        if member1 and member2 and member1 == member2:
+            raise forms.ValidationError("Member 1 and Member 2 must be different.")
+        return cleaned_data
+
+
+class AddConflictGroupForm(forms.Form):
+    pass
+
+
+class AddEventToConflictForm(forms.Form):
+    event = forms.ModelChoiceField(queryset=AvailableEvent.objects.none())
+
+    def __init__(self, *args, **kwargs):
+        event_queryset = kwargs.pop('event_queryset', AvailableEvent.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields['event'].queryset = event_queryset
+

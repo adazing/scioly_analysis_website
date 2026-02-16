@@ -2,12 +2,17 @@
     {% block headercontent %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
-    
+
     {% endblock %}
 
     {% block bodycontent %}
-    {% comment %} {{id }} {% endcomment %}
-    <a href="{% url 'generatedCompetitionSettingsView' id %}" class="btn btn-primary">Back</a>
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Generate</li>
+        </ol>
+    </nav>
     <div class="formblock">
         {% if valid %}
         <div class="d-flex justify-content-center my-5">
@@ -21,14 +26,22 @@
         <div id="btn-div"></div>
 
         {% else %}
-            Please specify teams to generate!
+            <div class="alert alert-warning mx-auto" style="max-width:600px;">
+                <h5>Cannot generate yet</h5>
+                <p class="mb-2">The following need to be configured before generating:</p>
+                <ul class="mb-0">
+                    {% if not has_teams %}<li>Add at least one <strong>team</strong> on the competition settings page.</li>{% endif %}
+                    {% if not has_members %}<li>Add <strong>members</strong> on the <a href="{% url 'editPreferencesView' pk=id %}">Members & Event Preferences</a> page.</li>{% endif %}
+                    {% if not has_events %}<li>Add <strong>events</strong> on the <a href="{% url 'editEventsView' pk=id %}">Events & Event Types</a> page.</li>{% endif %}
+                </ul>
+            </div>
         {% endif %}
     </div>
     {% endblock %}
 
 
     {% block scriptcontent%}
-    
+
 
     Set.prototype.isSubsetOf = function (otherSet) {
         for (let elem of this) {
@@ -44,7 +57,7 @@
             return val_team[e].includes(val_member);
         });
         var members_on_team = new Set(Object.values(val_team).flat());
-        
+
         // already enough events for the member
         if (events_done_by_member.length >= max_events_per_member) {
             return false;
@@ -61,7 +74,7 @@
         else if (members_on_team.size + 1 > team_size && !members_on_team.has(val_member)) {
             return false;
         }
-        
+
         // member has already reached max build events
         if (build_events.includes(val_event)){
             if (events_done_by_member.filter(function(e) {
@@ -105,7 +118,14 @@
 
 
 
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
     let pastel_colors = ["FFE9D0", "FFFED3", "BBE9FF", "B1AFFF", "E7F0DC", "E7D4B5", "EF9C66", "C8CFA0", "E1ACAC", "E1AFD1", "E493B3"];
+    let event_type_groups = {{event_type_groups|safe}};
     let all_teams_required_members_on_events = {{required_members_on_events|safe}};
     let all_teams_required_members = {{required_members|safe}};
     let seniors = {{seniors|safe}};
@@ -116,6 +136,7 @@
     let skill_vs_preferences = {{generated_competition_settings.skill_vs_preferences}};
     let use_ranking = {{generated_competition_settings.use_ranking|yesno:"true,false"}};
     let partner_preference_weight = {{generated_competition_settings.partner_preference_weight}};
+    let randomization = {{generated_competition_settings.randomization}};
     let available_members = {{available_members|safe}};
     let available_events = {{available_events|safe}};
     let events_with_3_members = {{events_with_3_members|safe}};
@@ -133,8 +154,29 @@
 
     let spinner = document.getElementById("spinner");
 
-    
-    function display_tables(teams_list, team_names){
+    // Seeded PRNG (mulberry32) for deterministic randomization
+    function mulberry32(seed) {
+        return function() {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    // Create a seeded random function from member+event string
+    function seeded_random(member, event) {
+        let hash = 0;
+        let str = member + "|" + event;
+        for (let i = 0; i < str.length; i++) {
+            let char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0;
+        }
+        return mulberry32(hash)();
+    }
+
+    function display_tables(teams_list, team_names, all_logs){
         console.log(teams_list);
         let generated_table_div = document.getElementById("generated-table");
         let idx = 0;
@@ -145,6 +187,7 @@
             let generated_table = document.createElement("table");
             generated_table.classList.add("table");
             generated_table.classList.add("table-hover");
+            generated_table.classList.add("team-result-table");
             //console.log(teams_list[team]);
             for (var event in teams_list[team]){
                 //console.log(event);
@@ -163,10 +206,118 @@
             }
             generated_table_div.appendChild(team_name_h1);
             generated_table_div.appendChild(generated_table);
+
+            // Generation log
+            if (all_logs && all_logs[idx] && all_logs[idx].length > 0) {
+                let log = all_logs[idx];
+                let accordionId = "log-accordion-" + idx;
+                let collapseId = "log-collapse-" + idx;
+                let accordion = document.createElement("div");
+                accordion.classList.add("accordion", "mb-4");
+                accordion.id = accordionId;
+                accordion.innerHTML = `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                                Generation Log (${log.length} steps)
+                            </button>
+                        </h2>
+                        <div id="${collapseId}" class="accordion-collapse collapse" data-bs-parent="#${accordionId}">
+                            <div class="accordion-body p-0" id="${collapseId}-body">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                generated_table_div.appendChild(accordion);
+
+                let logBody = accordion.querySelector(`#${collapseId}-body`);
+                for (let entry of log) {
+                    let stepDiv = document.createElement("div");
+                    stepDiv.classList.add("border-bottom", "p-3");
+
+                    let runnersUpHtml = entry.runners_up.map(r =>
+                        `${escapeHtml(r.member)} (+${r.delta.toFixed(3)})`
+                    ).join(", ") || "none";
+
+                    let headerHtml = `
+                        <div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+                            <div>
+                                <strong>Step ${entry.step}</strong>
+                                <span class="badge bg-${entry.phase === 'Required' ? 'warning text-dark' : 'primary'} ms-1">${entry.phase}</span>
+                                <strong class="ms-2">${escapeHtml(entry.chosen.member)}</strong>
+                                <span class="text-success ms-1">+${entry.chosen.delta.toFixed(3)}</span>
+                            </div>
+                            <small class="text-muted">Runners-up: ${runnersUpHtml}</small>
+                        </div>
+                    `;
+                    stepDiv.innerHTML = headerHtml;
+
+                    // Event details table
+                    if (entry.chosen.event_details && entry.chosen.event_details.length > 0) {
+                        let detailTable = document.createElement("table");
+                        detailTable.classList.add("table", "table-sm", "table-bordered", "mb-0", "small");
+                        let hasRandomization = randomization > 0;
+                        let hasRequired = entry.chosen.event_details.some(ed => ed.required_boost > 0);
+                        let randHeader = hasRandomization ? `<th>Randomization</th>` : '';
+                        let reqHeader = hasRequired ? `<th>Required</th>` : '';
+                        detailTable.innerHTML = `<thead class="table-light"><tr><th>Event</th><th>Skill</th><th>Preference</th><th>Partner</th>${randHeader}${reqHeader}<th>Event Total</th><th>Note</th></tr></thead>`;
+                        let dtbody = document.createElement("tbody");
+                        for (let ed of entry.chosen.event_details) {
+                            let tr = document.createElement("tr");
+                            if (ed.replaced) tr.classList.add("table-danger");
+
+                            let prefText = "—";
+                            if (ed.pref_rank !== null) {
+                                prefText = `#${ed.pref_rank} (+${ed.weighted_pref.toFixed(3)})`;
+                            }
+
+                            let partnerText = "—";
+                            if (ed.partner_matches.length > 0) {
+                                partnerText = `${ed.partner_matches.map(escapeHtml).join(", ")} (+${ed.weighted_partner.toFixed(3)})`;
+                            }
+
+                            let eventTotal = ed.skill + ed.weighted_pref + ed.weighted_partner + ed.rand_value + ed.required_boost;
+
+                            let randCell = '';
+                            if (hasRandomization) {
+                                let sign = ed.rand_value >= 0 ? '+' : '';
+                                randCell = `<td>${sign}${ed.rand_value.toFixed(3)}</td>`;
+                            }
+
+                            let reqCell = '';
+                            if (hasRequired) {
+                                reqCell = ed.required_boost > 0 ? `<td>+${ed.required_boost}</td>` : `<td>—</td>`;
+                            }
+
+                            let noteText = "";
+                            if (ed.replaced) {
+                                noteText = `Replaced ${escapeHtml(ed.replaced)}`;
+                            }
+
+                            tr.innerHTML = `
+                                <td>${escapeHtml(ed.event)}</td>
+                                <td>${ed.skill.toFixed(3)}</td>
+                                <td>${prefText}</td>
+                                <td>${partnerText}</td>
+                                ${randCell}
+                                ${reqCell}
+                                <td><strong>${eventTotal.toFixed(3)}</strong></td>
+                                <td>${noteText}</td>
+                            `;
+                            dtbody.appendChild(tr);
+                        }
+                        detailTable.appendChild(dtbody);
+                        stepDiv.appendChild(detailTable);
+                    }
+
+                    logBody.appendChild(stepDiv);
+                }
+            }
+
             idx ++;
         }
 
-        // display download 
+        // display download
         let btn_div = document.getElementById("btn-div");
         let btn = document.createElement("button");
         let text = document.createTextNode("Download XLSX file");
@@ -176,29 +327,28 @@
         btn.classList.add("btn-primary");
         btn.onclick = function() {
             let tables_div = document.getElementById("generated-table");
-            let tables = tables_div.getElementsByTagName("table");
+            let tables = tables_div.querySelectorAll("table.team-result-table");
             const workbook = XLSX.utils.book_new();
             for (let i=0; i<tables.length; i++){
                 worksheet = XLSX.utils.table_to_sheet(tables[i]);
                 for (let e=0; e<available_events.length; e++){
-                    for (let t=0; t<event_types.length; t++){
-                        if (event_types[t].includes(available_events[e])){
-                            {% comment %} console.log(String.fromCharCode(65+e)+"1"); {% endcomment %}
-                            worksheet["A"+(e+1).toString()].s = { fill: { fgColor: { rgb: pastel_colors[t % pastel_colors.length] } } };
+                    for (let t=0; t<event_type_groups.length; t++){
+                        if (event_type_groups[t].events.includes(available_events[e])){
+                            worksheet["A"+(e+1).toString()].s = { fill: { fgColor: { rgb: event_type_groups[t].color } } };
                         }
                     }
 
                 }
                 XLSX.utils.book_append_sheet(workbook, worksheet, team_names[i]);
             }
-            
+
             XLSX.writeFile(workbook, "Teams.xlsx", { compression: true });
         };
         btn_div.appendChild(btn);
 
 
     }
-    
+
 
     function deep_copy(team){
         return JSON.parse(JSON.stringify(team));
@@ -245,14 +395,17 @@
                     total_skill_score += min_score;
                     {% comment %} console.log(`Using min_score for member: ${m}, event: ${e}`); {% endcomment %}
                 }
-                let is_required = required_member_event_pairs.some(arr => 
-                    arr.length === [m, e].length && 
+                // randomization: add seeded noise per member-event pair
+                if (randomization > 0) {
+                    total_skill_score += (seeded_random(m, e) - 0.5) * randomization;
+                }
+                let is_required = required_member_event_pairs.some(arr =>
+                    arr.length === [m, e].length &&
                     arr.every((value, index) => value === [m, e][index])
                 );
                 if (is_required){
                     total_required_score += 10000; // large number
                 }
-                // Log the current total_skill_score to trace the calculation
             }
         }
         var normalized_partner_score = member_member_event_pairs.length > 0 ? total_partner_score / member_member_event_pairs.length : 0;
@@ -304,6 +457,8 @@ function find_optimal_member_addition(team, team_members, member_options, member
     let best_new_team = null;
     let best_new_member = null;
     let best_new_score = Number.NEGATIVE_INFINITY;
+    let candidates = [];
+    let score_before = calculate_team_score(team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score);
     for (let new_member of member_options){
         if (!team_members.includes(new_member)){ // for all members that are not already on the team
             let new_team = deep_copy(team);
@@ -333,8 +488,77 @@ function find_optimal_member_addition(team, team_members, member_options, member
                 }
             }
             if (changed){ // reached min events at least
-
                 let new_score = calculate_team_score(new_team, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score);
+                let assigned_events = Object.keys(new_team).filter(e => new_team[e].includes(new_member));
+
+                // Compute per-event details
+                let event_details = [];
+                for (let e of assigned_events) {
+                    let skill = (new_member in members_to_skill_level && e in members_to_skill_level[new_member])
+                        ? members_to_skill_level[new_member][e] : min_score;
+
+                    let pref_rank = null;
+                    let weighted_pref = 0;
+                    if (members_to_ranked_preferences[new_member] && members_to_ranked_preferences[new_member].includes(e)) {
+                        let pidx = members_to_ranked_preferences[new_member].indexOf(e);
+                        pref_rank = pidx + 1;
+                        let pref_score;
+                        if (use_ranking) {
+                            pref_score = 2 * (worst_preference_amount - pidx) / (worst_preference_amount * (worst_preference_amount + 1));
+                        } else {
+                            pref_score = 1 / worst_preference_amount;
+                        }
+                        weighted_pref = pref_score * skill_vs_preferences;
+                    }
+
+                    let partner_matches = [];
+                    let weighted_partner = 0;
+                    for (let mme of member_member_event_pairs) {
+                        if (mme[2] === e) {
+                            let other = null;
+                            if (mme[0] === new_member && new_team[e].includes(mme[1])) other = mme[1];
+                            if (mme[1] === new_member && new_team[e].includes(mme[0])) other = mme[0];
+                            if (other) partner_matches.push(other);
+                        }
+                    }
+                    if (partner_matches.length > 0 && member_member_event_pairs.length > 0) {
+                        weighted_partner = (partner_matches.length / member_member_event_pairs.length) * partner_preference_weight;
+                    }
+
+                    // Randomization
+                    let rand_value = 0;
+                    if (randomization > 0) {
+                        rand_value = (seeded_random(new_member, e) - 0.5) * randomization;
+                    }
+
+                    // Required boost
+                    let required_boost = 0;
+                    let is_required = required_member_event_pairs.some(arr =>
+                        arr.length === [new_member, e].length &&
+                        arr.every((value, index) => value === [new_member, e][index])
+                    );
+                    if (is_required) {
+                        required_boost = 10000;
+                    }
+
+                    // Check for replacement
+                    let replaced = null;
+                    for (let m of team[e]) {
+                        if (!new_team[e].includes(m)) {
+                            replaced = m;
+                            break;
+                        }
+                    }
+
+                    event_details.push({
+                        event: e, skill: skill, pref_rank: pref_rank,
+                        weighted_pref: weighted_pref, partner_matches: partner_matches,
+                        weighted_partner: weighted_partner, rand_value: rand_value,
+                        required_boost: required_boost, replaced: replaced
+                    });
+                }
+
+                candidates.push({member: new_member, score: new_score, delta: new_score - score_before, events: assigned_events, event_details: event_details});
                 if (new_score >= best_new_score){
                     best_new_score = new_score;
                     best_new_team = deep_copy(new_team);
@@ -343,8 +567,8 @@ function find_optimal_member_addition(team, team_members, member_options, member
             }
         }
     }
-    console.log(best_new_team, best_new_member);
-    return [best_new_team, best_new_member];
+    candidates.sort((a, b) => b.score - a.score);
+    return [best_new_team, best_new_member, candidates];
 }
 
 function fix_team4(team, team_members, available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors){
@@ -390,11 +614,15 @@ function make_team4(available_members, available_events, members_to_ranked_prefe
     }
 
     let team_members = [];
-
+    let generation_log = [];
+    let step = 1;
 
     while (team_members.length < required_members.length){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members, required_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
+        let [best_new_team, best_new_member, candidates] = find_optimal_member_addition(team, team_members, required_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
         if (best_new_team != null){
+            let chosen = candidates.find(c => c.member === best_new_member);
+            generation_log.push({step: step, phase: "Required", chosen: chosen, runners_up: candidates.filter(c => c.member !== best_new_member).slice(0, 3)});
+            step++;
             team = deep_copy(best_new_team);
             team_members.push(best_new_member);
         }else{
@@ -403,8 +631,11 @@ function make_team4(available_members, available_events, members_to_ranked_prefe
     }
 
     while (team_members.length < team_size){
-        let [best_new_team, best_new_member] = find_optimal_member_addition(team, team_members.concat(all_required_members), available_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
+        let [best_new_team, best_new_member, candidates] = find_optimal_member_addition(team, team_members.concat(all_required_members), available_members, members_to_ranked_preferences, member_member_event_pairs, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, required_member_event_pairs, event_types, skill_vs_preferences, min_score, build_events, conflicting_events, max_num_of_build_events_per_member, max_events_per_member, team_size, seniors, available_events);
         if (best_new_team != null){
+            let chosen = candidates.find(c => c.member === best_new_member);
+            generation_log.push({step: step, phase: "Open", chosen: chosen, runners_up: candidates.filter(c => c.member !== best_new_member).slice(0, 3)});
+            step++;
             team = deep_copy(best_new_team);
             team_members.push(best_new_member);
         }else{
@@ -413,7 +644,7 @@ function make_team4(available_members, available_events, members_to_ranked_prefe
     }
     console.log(team_members);
     team = fix_team4(team, team_members, available_events, members_to_ranked_preferences, member_member_event_pairs, team_size, events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, required_member_event_pairs, event_types, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, required_members, min_score, seniors);
-    return [team, team_members];
+    return [team, team_members, generation_log];
 }
 
 
@@ -440,12 +671,14 @@ function generateAllTeams(callback, team_names, available_members, available_eve
     }
 
     setTimeout(function(){
+        let all_logs = [];
         for (let t = 0; t<teams.length; t++){
-            let [generated_team, team_members]  = make_team4(available_members, available_events, members_to_ranked_preferences, member_member_event_pairs, teams[t], events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, all_teams_required_members_on_events[t], event_types, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, all_teams_required_members[t], min_score, seniors, all_required_members);
+            let [generated_team, team_members, generation_log]  = make_team4(available_members, available_events, members_to_ranked_preferences, member_member_event_pairs, teams[t], events_with_3_members, worst_preference_amount, members_to_skill_level, members_to_experience, build_events, all_teams_required_members_on_events[t], event_types, skill_vs_preferences, max_events_per_member, max_num_of_build_events_per_member, conflicting_events, min_events_per_member, all_teams_required_members[t], min_score, seniors, all_required_members);
             available_members = available_members.filter((member) => !team_members.includes(member));
             teams_list.push(generated_team);
+            all_logs.push(generation_log);
         }
-        callback(teams_list, team_names);
+        callback(teams_list, team_names, all_logs);
         console.log(teams_list);
         spinner.style.visibility = "hidden";
     }, 100);

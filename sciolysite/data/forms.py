@@ -5,12 +5,12 @@ from .models import *
 import csv
 import io
 
-def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
+def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces, then title-case
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "") if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 class SkillDataForm(ModelForm):
@@ -21,16 +21,19 @@ class SkillDataForm(ModelForm):
             "start_date",
             "end_date",
             "use_initial_skill",
+            "include_disqualifications",
         ]
         widgets = {
             "start_date": forms.DateInput(attrs={"type":"date"}),
             "end_date": forms.DateInput(attrs={"type":"date"}),
             "experience_rate": forms.NumberInput(attrs={"type":"range", "min":0, "max":1, "value":0.1}),
             "use_initial_skill": forms.CheckboxInput(),
+            "include_disqualifications": forms.CheckboxInput(),
         }
         labels = {
             "experience_rate":"value of experience",
             "use_initial_skill":"use initial skill parameter (recommended if many first-timers in the team/using full history of the team)",
+            "include_disqualifications":"include disqualifications/no submissions (placements strictly greater than number of teams competed)",
         }
     # def clean_experience_rate(self):
     #     experience_rate = self.cleaned_data.get('experience_rate')
@@ -63,7 +66,7 @@ class CompetitionForm(ModelForm):
 
 class TeamForm(ModelForm):
     # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
-    score_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), label="Score CSV data")
+    score_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), label="Score CSV data", required=False)
     class Meta:
         model = Team
         fields = [
@@ -74,38 +77,33 @@ class TeamForm(ModelForm):
         }
     def clean_score_data(self, *args, **kwargs):
         score_data = self.cleaned_data.get("score_data")
-        
+
+        if score_data is None:
+            return None
+
         if score_data.size > 1 * 1024 * 1024:  # 1MB limit
             raise forms.ValidationError("File size must be under 1MB.")
-        
+
         # check if ending is csv file
         if not score_data.name.endswith(".csv"):
             raise forms.ValidationError("This is not a valid csv file.")
-        
+
         # try to read the file and validate
         try:
             score_data.seek(0)  # Reset file pointer to start
             score_data_content = io.TextIOWrapper(score_data.file, encoding='utf-8').read()
             reader = csv.reader(score_data_content.splitlines(), delimiter=',')
-            # next(reader)  # Skip header
-        except:
+        except (UnicodeDecodeError, csv.Error, IOError):
             raise forms.ValidationError("This is not a valid csv file.")
-        row_num = 0
         done_events = []
         for i, row in enumerate(reader):
-            # see if row length is changes --> tampering with file?
-            if i==0:
-                row_length=len(row)
-            elif len(row)!=row_length:
-                raise forms.ValidationError("This is not a valid csv file.")
-            
-            if row_length != 5:
-                raise forms.ValidationError("This is not the correct format. The length of each row should be 5 (event, member1, member2, member3, score).")
-            
+            if len(row) < 5:
+                continue  # skip short/empty rows
+
             # see if score is an int
             try:
                 score = int(row[4].strip())
-            except:
+            except (ValueError, TypeError):
                 raise forms.ValidationError("Some of the scores/ranks are non-integer values.")
 
             if score<1:
@@ -118,19 +116,14 @@ class TeamForm(ModelForm):
                 # event is repeated?
                 if event_name in done_events:
                     raise forms.ValidationError("There are some event repeats.")
-                
+
                 # first member exists
                 if remove_punctuation(row[1], False) == "":
                     raise forms.ValidationError("One of the events has no people on it.")
-                    
+
                 done_events.append(event_name)
-                row_num += 1
             else: # reached end
                 break
-        if row_num <= 0:
-            raise forms.ValidationError("Not enough valid rows.")
-        elif row_num >= 50:
-            raise forms.ValidationError("Cannot have more than 50 rows.")
         return score_data_content
 
 class DeleteConfirmationForm(forms.Form):
@@ -165,84 +158,71 @@ class NameChangeForm(forms.Form):
         return cleaned_data
 
 class PracticeForm(ModelForm):
-    # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
-    score_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), label="Score CSV data")
+    score_data = forms.FileField(widget=forms.FileInput(attrs={"accept": ".csv"}), label="Score CSV data", required=False)
     class Meta:
         model = Practice
         fields = [
+            "name",
             "event_name",
             "date",
             "total_points",
         ]
-        # labels = {
-        #     "name": "Name of Team"
-        # }
         widgets = {
             "date": forms.DateInput(attrs={"type":"date"}),
         }
     def clean_score_data(self, *args, **kwargs):
         score_data = self.cleaned_data.get("score_data")
-        
+
+        if score_data is None:
+            return None
+
         if score_data.size > 1 * 1024 * 1024:  # 1MB limit
             raise forms.ValidationError("File size must be under 1MB.")
-        
+
         # check if ending is csv file
         if not score_data.name.endswith(".csv"):
             raise forms.ValidationError("This is not a valid csv file.")
-        
+
         # try to read the file and validate
         try:
             score_data.seek(0)  # Reset file pointer to start
             score_data_content = io.TextIOWrapper(score_data.file, encoding='utf-8').read()
             reader = csv.reader(score_data_content.splitlines(), delimiter=',')
-            # next(reader)  # Skip header
-        except:
+        except (UnicodeDecodeError, csv.Error, IOError):
             raise forms.ValidationError("This is not a valid csv file.")
-        row_num = 0
         done_members = []
         for i, row in enumerate(reader):
-            # see if row length is changes --> tampering with file?
-            if i==0:
-                row_length=len(row)
-            elif len(row)!=row_length:
-                raise forms.ValidationError("This is not a valid csv file.")
-            
-            if row_length != 2:
-                raise forms.ValidationError("This is not the correct format. The length of each row should be 2 (member, points).")
-            
-            # see if score is an float
+            if len(row) < 2:
+                continue  # skip short/empty rows
+
+            # see if score is a float
             try:
                 score = float(row[1].strip())
-            except:
+            except (ValueError, TypeError):
                 raise forms.ValidationError("Some of the point values are non-float values.")
 
             if score<0:
                 raise forms.ValidationError("Some of the point values are less than 0.")
 
-            # if event_name is blank, means reached end of file
+            # if member_name is blank, means reached end of file
             member_name=row[0]
-            member_name=remove_punctuation(member_name, True)
+            member_name=remove_punctuation(member_name, False)
             if member_name!="":
-                # event is repeated?
+                # member is repeated?
                 if member_name in done_members:
                     raise forms.ValidationError("There are some member repeats.")
-                                    
+
                 done_members.append(member_name)
-                row_num += 1
             else: # reached end
                 break
-        if row_num <= 0:
-            raise forms.ValidationError("Not enough valid rows.")
-        elif row_num >= 100:
-            raise forms.ValidationError("Cannot have more than 100 rows.")
         return score_data_content
 
 
 class PracticeEditForm(ModelForm):
-    # SHOULD VALIDATE AND PUT ATTRS THING ON OTHER STUFF ARMITA PLS REMIND ME
     class Meta:
         model = Practice
         fields = [
+            "name",
             "event_name",
             "date",
             "total_points",

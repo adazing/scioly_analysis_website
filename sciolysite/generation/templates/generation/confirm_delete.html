@@ -2,12 +2,24 @@
 {% load crispy_forms_tags %}
 
     {% block bodycontent %}
+        <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+                {% if generated_team %}
+                <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Delete {{generated_team.name}}</li>
+                {% elif generated_competition_settings %}
+                <li class="breadcrumb-item active" aria-current="page">Delete {{generated_competition_settings.name}}</li>
+                {% endif %}
+            </ol>
+        </nav>
         <div class="formblock">
-            <p class="h4">Are you sure you want to delete {{item}}?</p>
+            <h2 class="mb-3">Confirm Delete</h2>
+            <p>Are you sure you want to delete {{item}}?</p>
             <form method="POST">
                 {% csrf_token %}
                 {{ form|crispy}}
-                <input type="submit" value="OK" class="btn btn-primary">
+                <input type="submit" value="OK" class="btn btn-danger">
             </form>
         </div>
     {% endblock %}

@@ -10,25 +10,33 @@
         <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     {% endblock %}
     {% block bodycontent %}
+    <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Skill View</li>
+        </ol>
+    </nav>
 
     <div class="formblock">
-        <p class="h4">Change Settings:</p>
+        <h2 class="mb-3">Skill View</h2>
+        <h5 class="mb-3">Settings</h5>
         <form method="POST">
             {% csrf_token %}
             {{ form|crispy}}
-            <input type="submit" value="OK" class="btn btn-primary">
+            <input type="submit" value="Update" class="btn btn-primary">
         </form>
     </div>
 
     <div class="formblock">
+        <hr>
         <h4>Experience</h4>
             <div id ="experience-table"></div>
         <hr>
         <h4>Skills</h4>
         <div id="skills-table"></div>
-        <p>*Note: The metric is relatively scaled from 0 to 100 and is relative to other members. Both experience and scores are taken into account.</p>
-        <p>*Note: This table does not count disqualifications/no submissions</p>
-        <p>*Disclaimer: This table is made based on limited data (only on scores and experience from past competitions) and may not represent overall skill.</p>
+        <p class="text-muted mt-3"><small>The metric is relatively scaled from 0 to 100 and is relative to other members. Both experience and scores are taken into account.</small></p>
+        <p class="text-muted"><small>This table is made based on limited data (only on scores and experience from past competitions) and may not represent overall skill.</small></p>
+        <div class="alert alert-info mt-3"><small>The settings above also affect team generation. The generation page uses the same skill analysis (date range, experience rate, initial skill, and disqualification settings) configured here.</small></div>
         <hr>
     </div>
     {% endblock %}

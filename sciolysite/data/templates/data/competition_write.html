@@ -2,7 +2,20 @@
 {% load crispy_forms_tags %}
 
     {% block bodycontent %}
+        <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+                {% if competition %}
+                <li class="breadcrumb-item"><a href="{% url 'competitionView' pk=competition.id %}">{{competition.name}}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit</li>
+                {% else %}
+                <li class="breadcrumb-item active" aria-current="page">Add Competition</li>
+                {% endif %}
+            </ol>
+        </nav>
+
         <div class="formblock">
+            <h2 class="mb-4">{% if competition %}Edit Competition{% else %}Add Competition{% endif %}</h2>
             <form method="POST">
                 {% csrf_token %}
                 {{ form|crispy}}

@@ -1,17 +1,19 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from .forms import *
 import csv
 
 # Create your views here.
-def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces
+def remove_punctuation(input_string, is_event): # make it so only allow for letters and spaces, then title-case
     input_string = str(input_string)
     if is_event:
-        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").lower().replace("&", "and") if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(B)", "").replace("(3)", "").replace("&", "and") if c.isalpha() or c==" "])
     else:
-        input_string="".join([c for c in input_string.replace("(S)", "").lower() if c.isalpha() or c==" "])
+        input_string="".join([c for c in input_string.replace("(S)", "") if c.isalpha() or c==" "])
     return input_string.strip().title()
 
 
+@login_required
 def ConflictCheckingView(request):
     form = ConflictCheckingForm(request.POST or None, request.FILES or None)
     

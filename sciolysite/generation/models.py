@@ -18,6 +18,7 @@ class GeneratedCompetitionSettings(models.Model):
     max_num_of_build_events_per_member = models.PositiveIntegerField(default=2)
     use_ranking = models.BooleanField(default=True)
     partner_preference_weight = models.FloatField(default=0.05)
+    randomization = models.FloatField(default=0)
     #skill vs preference score preferences
     def __str__(self):
         return self.name+str(self.id)
@@ -28,10 +29,11 @@ class GeneratedTeam(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True,auto_now=False)
     team_size = models.PositiveIntegerField()
+    order = models.PositiveIntegerField(default=0)
     # is_displayed = models.BooleanField(default = True)
     # was_part_of_previous_generation = models.BooleanField(default = False)
     class Meta:
-        ordering = ["date"]
+        ordering = ["order", "date"]
 
 
 # IMPORTANCE_CHOICES = (
@@ -45,6 +47,7 @@ class GeneratedTeam(models.Model):
     
 class EventType(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)
+    color = models.CharField(max_length=6, default="FFE9D0")
 
 class ConflictingEvents(models.Model):
     generated_competition_settings = models.ForeignKey(GeneratedCompetitionSettings, on_delete=models.CASCADE)

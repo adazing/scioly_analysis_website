@@ -51,8 +51,10 @@ def loginView(request):
 
 @login_required
 def logoutView(request):
-    logout(request)
-    return render(request, 'users/logout.html')
+    if request.method == "POST":
+        logout(request)
+        return render(request, 'users/logout.html')
+    return redirect('home')
 
 @login_required
 def passwordChangeView(request):

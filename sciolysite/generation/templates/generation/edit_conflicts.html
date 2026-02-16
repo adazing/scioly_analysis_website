@@ -1,0 +1,67 @@
+{% extends 'main.html' %}
+
+{% block bodycontent %}
+<nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Event Conflicts</li>
+    </ol>
+</nav>
+<h2 class="w-75 mx-auto mb-3">Event Conflicts</h2>
+<p class="text-muted w-75 mx-auto mb-3">Define groups of events that run at the same time. The algorithm will avoid assigning the same member to multiple events within a conflict group.</p>
+
+{% if not has_events %}
+    <div class="alert alert-info w-75 mx-auto">Add events first before creating conflict groups.</div>
+{% else %}
+    <form method="POST" class="w-75 mx-auto mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_group">
+        <button type="submit" class="btn btn-primary">Add Conflict Group</button>
+    </form>
+
+    {% if groups_data %}
+        {% for gd in groups_data %}
+            <div class="card w-75 mx-auto my-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Conflict Group #{{ forloop.counter }}</strong>
+                    <a href="{% url 'deleteConflictGroup' pk=gd.group.id %}" class="btn btn-danger btn-sm">Delete Group</a>
+                </div>
+                <div class="card-body">
+                    {% if gd.events %}
+                        <ul class="list-group mb-3">
+                            {% for e in gd.events %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ e.name }}
+                                    {% if e.needs_3_members %}<span class="badge bg-info">3-person</span>{% endif %}
+                                    {% if e.is_build_event %}<span class="badge bg-warning text-dark">Build</span>{% endif %}
+                                    <a href="{% url 'removeEventFromConflict' pk=e.id %}" class="btn btn-outline-danger btn-sm">Remove</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No events in this group.</p>
+                    {% endif %}
+
+                    {% if unassigned_events %}
+                        <form method="POST" class="d-flex gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_event_to_conflict">
+                            <input type="hidden" name="group_id" value="{{ gd.group.id }}">
+                            <select name="event_id" class="form-select" style="max-width:300px;">
+                                {% for e in unassigned_events %}
+                                    <option value="{{ e.id }}">{{ e.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-secondary btn-sm">Add Event</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info w-75 mx-auto">No conflict groups yet.</div>
+    {% endif %}
+{% endif %}
+
+{% endblock %}

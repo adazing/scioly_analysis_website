@@ -17,6 +17,7 @@ class Competition(models.Model):
 # Talking about which events either the A team of B team did for one specific competition.    
 class Team(models.Model):
     name = models.CharField(max_length=200)
+    notes = models.TextField(blank=True)
     competition = models.ForeignKey(Competition, on_delete = models.CASCADE)
     # number_of_teams_competed = models.PositiveIntegerField()
     # score_data = models.FileField(upload_to="scores")
@@ -48,6 +49,7 @@ class Member(models.Model):
 
 
 class Practice(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Name of Practice")
     event_name = models.CharField(max_length=200)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now=False,auto_now_add=False)
@@ -65,6 +67,7 @@ class SkillData(models.Model):
     start_date = models.DateField(default = date(date.today().year, 8, 1))
     end_date = models.DateField(default = date(date.today().year + 1, 8, 1))
     use_initial_skill = models.BooleanField(default = True)
+    include_disqualifications = models.BooleanField(default = False)
 # class SkillDataVal(models.Model)
 # class PracticeMember(models.Model):
 #     name = models.CharField(max_length=200)

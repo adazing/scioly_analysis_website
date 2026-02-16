@@ -412,6 +412,7 @@
         <li>\(o_B\) &mdash; maximum build events per member</li>
         <li>\(w_e\) &mdash; event preference weight parameter (controls how much event preferences influence team score)</li>
         <li>\(w_p\) &mdash; partner preference weight parameter (controls how much partner preferences influence team score)</li>
+        <li>\(r\) &mdash; randomization parameter (controls the magnitude of random noise added to skill scores, range \([0, 1]\))</li>
         <li>\(d\) &mdash; the maximum number of preferences any member listed</li>
         <li>\(p_{me}\) &mdash; preference rank of event \(e\) for member \(m\) (1 = top choice; if not listed, \(p_{me} = d + 1\))</li>
         <li>\(\hat{s}_{me}\) &mdash; skill estimate for member \(m\) in event \(e\) (from Section 3)</li>
@@ -555,6 +556,30 @@
     </p>
     <p>
         For important qualifying competitions, coaches might set \(w_e\) and \(w_p\) low to prioritize skill. For invitational competitions focused on development, higher values of \(w_e\) and \(w_p\) give more weight to member satisfaction.
+    </p>
+
+    <h4>4.4.6 Randomization</h4>
+    <p>
+        The algorithm is deterministic by default&mdash;running it twice with the same inputs produces the same team. While this is desirable for reproducibility, it means the algorithm always converges to the same local optimum found by the greedy search. The randomization parameter \(r \in [0, 1]\) introduces controlled noise into the skill scores, allowing the algorithm to explore different assignments.
+    </p>
+    <p>
+        When \(r > 0\), the skill score is modified by adding a small random perturbation to each member-event skill estimate:
+        $$h_S(T) = \sum_{e \in E} \sum_{m \in T_e} \big(\hat{s}_{me} + \epsilon_{me}\big)$$
+        where \(\epsilon_{me} = \big(R(m, e) - 0.5\big) \cdot r\) and \(R(m, e) \in [0, 1)\) is a pseudorandom value.
+    </p>
+    <p>
+        The noise term \(\epsilon_{me}\) is uniformly distributed in \(\big[-\frac{r}{2}, \frac{r}{2}\big)\). At \(r = 0\), no noise is added and the algorithm behaves as before. At \(r = 1\), the noise can shift each skill estimate by up to \(\pm 0.5\), which is enough to occasionally change assignment decisions when members have similar skill levels.
+    </p>
+    <p>
+        <strong>Seeded randomness:</strong> The random value \(R(m, e)\) is generated using a seeded pseudorandom number generator (PRNG) keyed on the member-event pair. Specifically, a hash is computed from the concatenation of the member's name and the event's name, and this hash is used as the seed for a Mulberry32 PRNG. This means:
+    </p>
+    <ul>
+        <li>The same member-event pair always receives the same random perturbation, so regenerating with the same settings produces the same result.</li>
+        <li>Different member-event pairs receive different (uncorrelated) perturbations.</li>
+        <li>To get a genuinely different team assignment, the coach must change some input (e.g., a member name, event name, or other setting), which changes the hash seeds and produces new perturbations.</li>
+    </ul>
+    <p>
+        <strong>When to use randomization:</strong> Randomization is most useful when the algorithm produces a team that seems suboptimal due to greedy decisions. A small amount of randomization (e.g., \(r = 0.1\)) can nudge the algorithm into exploring slightly different paths during the greedy search, potentially finding a better local optimum. Larger values (e.g., \(r = 0.5\) or higher) introduce more variability and may produce significantly different team compositions, which can be useful for exploring alternative team structures.
     </p>
 
     <h2>4.5 Step 3: Greedy Team Construction</h2>
@@ -939,6 +964,11 @@
 
     <p>
         This process repeats until all events are filled or no more valid assignments exist. In practice, some events might remain unfilled if no team member can be validly assigned (e.g., if all members have schedule conflicts with that event).
+    </p>
+
+    <h5>Why This Phase Is Needed</h5>
+    <p>
+        One might wonder why events can still be empty after the main greedy construction, given that each member is assigned up to \(o_\Gamma\) events. The key reason is that <em>replacements during later steps can retroactively free up spots</em>. The main loop processes members sequentially: when member \(m_1\) is added at step 3 and assigned to 4 events (unable to reach 5 due to schedule conflicts), the algorithm moves on. Later at step 8, member \(m_2\) might replace someone on Event X via the replacement mechanism, freeing an open slot on Event X. Member \(m_1\) could now validly fill that slot, but the main loop has already moved past them. This phase catches those cases by re-scanning all team members against all events after the full team is assembled.
     </p>
 
     <h5>Note on Optimality</h5>

@@ -4,12 +4,11 @@
 
     {% block bodycontent %}
         <div class="formblock">
+            <h2 class="mb-4">Edit Practice</h2>
             <form method="POST">
                 {% csrf_token %}
                 {{ form|crispy }}
-
                 <input type="submit" value="Save" class="btn btn-primary">
-
             </form>
         </div>
     {% endblock %}

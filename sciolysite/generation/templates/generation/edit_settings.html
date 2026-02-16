@@ -4,7 +4,15 @@
 
 
     {% block bodycontent %}
+        <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionsListView' %}">Generation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'generatedCompetitionSettingsView' pk=generated_competition_settings.id %}">{{generated_competition_settings.name}}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit Settings</li>
+            </ol>
+        </nav>
         <div class="formblock">
+            <h2 class="mb-3">Edit Settings</h2>
             <form method="POST">
                 {% csrf_token %}
                 {{ form|crispy }}

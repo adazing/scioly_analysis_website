@@ -2,12 +2,28 @@
 {% load crispy_forms_tags %}
 
     {% block bodycontent %}
+        <nav aria-label="breadcrumb" class="mt-3 w-75 mx-auto">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'competitionListView' %}">Data</a></li>
+                {% if team %}
+                <li class="breadcrumb-item"><a href="{% url 'competitionView' pk=team.competition.id %}">{{team.competition.name}}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'teamView' pk=team.id %}">{{team.name}}</a></li>
+                {% elif competition %}
+                <li class="breadcrumb-item"><a href="{% url 'competitionView' pk=competition.id %}">{{competition.name}}</a></li>
+                {% elif practice %}
+                <li class="breadcrumb-item"><a href="{% url 'practiceView' pk=practice.id %}">{{practice.name}}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active" aria-current="page">Delete</li>
+            </ol>
+        </nav>
+
         <div class="formblock">
-            <p class="h4">Are you sure you want to delete {{item}}?</p>
+            <h2 class="mb-4">Confirm Deletion</h2>
+            <p class="h5">Are you sure you want to delete {{item}}?</p>
             <form method="POST">
                 {% csrf_token %}
                 {{ form|crispy}}
-                <input type="submit" value="OK" class="btn btn-primary">
+                <input type="submit" value="Delete" class="btn btn-danger">
             </form>
         </div>
     {% endblock %}

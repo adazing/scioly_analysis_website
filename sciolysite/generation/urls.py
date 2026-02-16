@@ -15,7 +15,16 @@ urlpatterns = [
     path('generate/<str:pk>/', views.frontend_generate, name="frontedGenerate"),
     path('edit-requirements/<str:pk>/', views.editRequirementsView, name="editRequirementsView"),
     path('delete-requirement/<str:pk>/', views.deleteRequirement, name="deleteRequirement"),
-    # when edit final generated competition, it causes the generatedCompetitionView to be deleted! Fixed
-    # all required members shown when generating teams - fixed
-    # make sure conflicting events data has at least 2 events per row
+    # Edit pages
+    path('edit-events/<str:pk>/', views.editEventsView, name="editEventsView"),
+    path('delete-event/<str:pk>/', views.deleteEvent, name="deleteEvent"),
+    path('delete-event-type/<str:pk>/', views.deleteEventType, name="deleteEventType"),
+    path('edit-preferences/<str:pk>/', views.editPreferencesView, name="editPreferencesView"),
+    path('delete-preference/<str:pk>/', views.deletePreference, name="deletePreference"),
+    path('delete-member/<str:pk>/', views.deleteMember, name="deleteMember"),
+    path('edit-partner-preferences/<str:pk>/', views.editPartnerPreferencesView, name="editPartnerPreferencesView"),
+    path('delete-partner-preference/<str:pk>/', views.deletePartnerPreference, name="deletePartnerPreference"),
+    path('edit-conflicts/<str:pk>/', views.editConflictsView, name="editConflictsView"),
+    path('remove-event-from-conflict/<str:pk>/', views.removeEventFromConflict, name="removeEventFromConflict"),
+    path('delete-conflict-group/<str:pk>/', views.deleteConflictGroup, name="deleteConflictGroup"),
 ]
