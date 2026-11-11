@@ -114,7 +114,9 @@ TEMPLATES = [
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
-    'django.contrib.auth.backends.ModelBackend',
+    # Username OR email login. Subclass of ModelBackend, so everything that
+    # worked before (username login, permissions) still works the same.
+    'users.backends.UsernameOrEmailBackend',
 
     # `allauth` specific authentication methods, such as login by email
     # 'allauth.account.auth_backends.AuthenticationBackend',
@@ -200,3 +202,31 @@ LOGIN_REDIRECT_URL = "/"
 LOGIN_URL="/login/"
 
 LOGIN_REDIRECT_URL="/"
+
+# ---------------------------------------------------------------------------
+# Email / password reset
+# Secrets come from environment variables on the server - never commit them.
+# If EMAIL_HOST_PASSWORD is not set (e.g. local dev), emails are printed to
+# the console instead of being sent.
+# ---------------------------------------------------------------------------
+
+# Public base URL used to build links in password-reset emails. Using a fixed
+# value (instead of the request's Host header) prevents host-header injection
+# from sending users reset links that point at an attacker's domain.
+SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+if EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_TIMEOUT = 10
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "SciolyAnalysis <noreply@localhost>")
+
+# Reset links expire after 1 hour (Django default is 3 days).
+PASSWORD_RESET_TIMEOUT = 60 * 60
